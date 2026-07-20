@@ -58,7 +58,6 @@ window.addEventListener('keydown', (e) => {
             }
         } 
         else if (phase === 4 && subPhase >= 1) {
-            // 드론으로 장애물(쓰레기, 좀비, 보석) 잡기
             let target = obstacles.find(obs => 
                 Math.abs((drone.x + drone.w/2) - (obs.x + obs.w/2)) < 60 &&
                 Math.abs((drone.y + drone.h/2) - (obs.y + obs.h/2)) < 60
@@ -302,11 +301,34 @@ function update() {
             }
         }
         else if (subPhase === 3) {
+            // ★ 드론 착지 시 플레이어를 기존 시작 위치(x: 180)로 부드럽게 복귀시킴 ★
+            let isYReady = false;
+            let isXReady = false;
+
+            // Y축 하강
             if (player.y < 270) {
                 player.y += 3;
-                drone.y = player.y;
             } else {
                 player.y = 270;
+                isYReady = true;
+            }
+
+            // X축 복귀 (목표: 180)
+            if (player.x > 180) {
+                player.x -= 5;
+                if (player.x <= 180) { player.x = 180; isXReady = true; }
+            } else if (player.x < 180) {
+                player.x += 5;
+                if (player.x >= 180) { player.x = 180; isXReady = true; }
+            } else {
+                isXReady = true;
+            }
+
+            drone.y = player.y;
+            drone.x = player.x - drone.w;
+
+            // X축, Y축 모두 제자리에 돌아오면 다음 라운드로
+            if (isYReady && isXReady) {
                 drone.isAttached = false;
                 phase = 4; subPhase = 0; spawnTimer = 0;
             }
@@ -318,7 +340,6 @@ function update() {
             if (spawnTimer > 180) { subPhase = 1; spawnTimer = 0; }
         }
         else if (subPhase === 1) {
-            // [1단계] 쓰레기 5개 청소
             if (spawnTimer > 0 && spawnTimer % 80 === 0 && spawnCount < 5) {
                 spawnObstacle('garbage', '쓰레기', 310, 4, 800, 40, 40);
                 spawnCount++;
@@ -328,23 +349,20 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // [2단계] ★ 20초(1200프레임) 좀비 웨이브 디펜스 ★
             if (spawnTimer >= 0 && spawnTimer <= 1200) {
-                // 45프레임마다 좀비 스폰
                 if (spawnTimer % 45 === 0) {
-                    // 60% 확률로 플레이어를 직접 위협하는 바닥 높이로, 40%는 공중으로
                     let isGround = Math.random() > 0.4; 
                     let zombieY = isGround ? (270 + Math.random() * 40) : (Math.random() * 200 + 50);
-                    let zombieSpeed = 4 + Math.random() * 3; // 4~7 랜덤 속도
+                    // ★ 좀비 속도 아주 살짝 하향 (3 ~ 5.5) ★
+                    let zombieSpeed = 3 + Math.random() * 2.5; 
                     spawnObstacle('zombie', '좀비', zombieY, zombieSpeed, 800, 40, 40);
                 }
             } 
             else if (spawnTimer > 1200 && obstacles.length === 0) {
-                subPhase = 3; spawnTimer = -60; // 좀비 웨이브 클리어!
+                subPhase = 3; spawnTimer = -60;
             }
         }
         else if (subPhase === 3) {
-            // [3단계] 최종 보석 등장
             if (spawnTimer === 0) spawnObstacle('gem', '💎보석', 250, 3, 800, 50, 50);
             
             let isGemAlive = obstacles.find(obs => obs.type === 'gem');
@@ -354,7 +372,7 @@ function update() {
         }
     }
 
-    // 충돌 처리 (4라운드는 플레이어 본체 피격만 체크)
+    // 충돌 처리
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.x -= obs.speed; 
@@ -433,7 +451,6 @@ function draw() {
         ctx.fillText("WASD와 스페이스바를 이용해 다가오는 장애물을 치우시오.", 110, 170);
     }
     
-    // ★ 좀비 웨이브 경고 텍스트
     if (phase === 4 && subPhase === 2 && spawnTimer > 0 && spawnTimer < 180) {
         ctx.fillStyle = 'red';
         ctx.font = 'bold 30px Arial';
@@ -448,7 +465,7 @@ function draw() {
         else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
         else if (obs.type === 'wall') ctx.fillStyle = '#444';
         else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
-        else if (obs.type === 'zombie') ctx.fillStyle = '#2E8B57'; // 좀비는 칙칙한 녹색
+        else if (obs.type === 'zombie') ctx.fillStyle = '#2E8B57'; 
         else if (obs.type === 'gem') ctx.fillStyle = '#FF00FF'; 
         else if (obs.type === 'missile') ctx.fillStyle = '#ff0000'; 
         else if (obs.type === 'data' || obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
@@ -497,7 +514,6 @@ function draw() {
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
-    // 자물쇠 안내 메시지
     if (phase === 2 && subPhase === 1) {
         ctx.fillStyle = 'white';
         ctx.font = '14px Arial';
