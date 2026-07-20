@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- 게임 상태 변수 ---
-let phase = 1; 
+let phase = 2; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -81,11 +81,11 @@ function checkCollision(p, obs) {
     );
 }
 
-// --- 메인 게임 루프 ---
+// --- 메인 게임 물리 & 시나리오 업데이트 ---
 function update() {
     if (isGameOver) return;
 
-    // 플레이어 물리 엔진
+    // 플레이어 물리 연산
     player.vy += player.gravity;
     player.y += player.vy;
 
@@ -95,12 +95,12 @@ function update() {
         player.isJumping = false;
     }
 
-    // 1. 초반부(Phase 1) 시나리오 엔진 (빠른 템포 유지)
+    // 1. 초반부(Phase 1) 시나리오 엔진 (여유로운 템포로 복구)
     if (phase === 1) {
         spawnTimer++;
 
         if (subPhase === 0) { 
-            if (spawnTimer >= 60) { 
+            if (spawnTimer >= 70) {  // 60 -> 70으로 복구
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
@@ -121,7 +121,7 @@ function update() {
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
-                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = 0; } 
+                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; } // 대기시간 -30 복구
             }
         }
         else if (subPhase === 2) { 
@@ -134,27 +134,27 @@ function update() {
             }
         }
         else if (subPhase === 3) { 
-            if (spawnTimer >= 60) {
+            if (spawnTimer >= 70) {  // 60 -> 70으로 복구
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
-                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = 0; }
+                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -30; } // 대기시간 -30 복구
             }
         }
         else if (subPhase === 4) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 70 === 0) { 
+            if (spawnTimer > 0 && spawnTimer % 80 === 0) {  // 70 -> 80으로 복구
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('balloon', '풍선', isUp ? 200 : 310, 5);
                 spawnCount++;
-                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -20; } 
+                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } // 대기시간 -80 복구
             }
         }
         else if (subPhase === 5) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'C', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 70 === 0) {
+            if (spawnTimer > 0 && spawnTimer % 80 === 0) {  // 70 -> 80으로 복구
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('note', '음표', isUp ? 200 : 310, 5);
                 spawnCount++;
@@ -166,7 +166,7 @@ function update() {
                 backgroundCharacter = null; 
                 phase = 2; 
                 subPhase = 0;
-                spawnTimer = -10; 
+                spawnTimer = -30;  // 전환 대기시간 -30 복구
             }
         }
     }
@@ -177,7 +177,6 @@ function update() {
         spawnTimer++;
 
         if (subPhase === 0) {
-            // [0단계] 이지선다(상/하) 에러 아이콘
             if (spawnTimer > 0 && spawnTimer % 35 === 0) {
                 let isHigh = Math.random() > 0.5;
                 let targetY = isHigh ? 180 : 315; 
@@ -188,12 +187,11 @@ function update() {
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -50; 
+                    spawnTimer = -60; // 전환 대기시간 넉넉하게 -60
                 }
             }
         }
         else if (subPhase === 1) {
-            // [1단계] 점프불가 수식 자물쇠 5개
             if (spawnTimer > 0 && spawnTimer % 90 === 0) {
                 let equations = [
                     { q: '3! = ?', a: '6' },
@@ -218,14 +216,12 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // [2단계] 해커J 메시지
             if (spawnTimer === 0) {
                 spawnObstacle('hacker', '해커J왔다감 /(^3^)/', 60, 7, 800, 250, 20);
             }
 
             if (spawnTimer > 100 && obstacles.length === 0) {
-                // 아직 후반부가 없으므로 여기서 게임 정지 및 클리어 처리
-                console.log("2라운드 클리어!");
+                console.log("2라운드 클리어! 후반부 대기 중...");
             }
         }
     }
@@ -243,9 +239,8 @@ function update() {
     obstacles = obstacles.filter(obs => obs.x > -100 && obs.x < 1000);
 }
 
-// --- 🎨 렌더링 로직 (Math.floor를 이용한 픽셀 쪼개짐 방지 최적화) ---
+// --- 🎨 렌더링 로직 ---
 function draw() {
-    // 배경 테마 전환
     if (phase === 1) {
         ctx.fillStyle = '#ffffff';
     } else {
@@ -253,30 +248,26 @@ function draw() {
     }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 바닥 테마 전환
     ctx.fillStyle = (phase === 1) ? '#333' : '#00ffff'; 
     ctx.fillRect(0, 350, 800, 50);
 
-    // 🚀 플레이어 최적화 렌더링
     ctx.fillStyle = (phase === 1) ? 'blue' : '#00ffff'; 
-    ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
+    ctx.fillRect(player.x, player.y, player.w, player.h);
     
-    // 배경 캐릭터
     if (backgroundCharacter) {
         ctx.fillStyle = 'purple';
-        ctx.fillRect(Math.floor(backgroundCharacter.x), Math.floor(backgroundCharacter.y), 40, 80);
+        ctx.fillRect(backgroundCharacter.x, backgroundCharacter.y, 40, 80);
         ctx.fillStyle = 'white';
         ctx.font = 'bold 20px Arial';
-        ctx.fillText(backgroundCharacter.text, Math.floor(backgroundCharacter.x + 12), Math.floor(backgroundCharacter.y + 45));
+        ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
 
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
-            ctx.fillText('!', Math.floor(backgroundCharacter.x + 15), Math.floor(backgroundCharacter.y - 15));
+            ctx.fillText('!', backgroundCharacter.x + 15, backgroundCharacter.y - 15);
         }
     }
 
-    // 🚀 장애물 최적화 렌더링
     for (let obs of obstacles) {
         if (obs.type === 'attack') ctx.fillStyle = 'red';
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
@@ -285,7 +276,7 @@ function draw() {
         else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
         else ctx.fillStyle = 'green';
 
-        ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
+        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
         
         if (obs.type === 'hacker') ctx.fillStyle = '#00ff00'; 
         else if (obs.type === 'lock') ctx.fillStyle = 'gold'; 
@@ -294,27 +285,24 @@ function draw() {
         ctx.font = (obs.type === 'lock') ? 'bold 20px Arial' : '16px Arial';
         
         if (obs.type === 'lock') {
-            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
+            ctx.fillText(obs.text, obs.x + 5, obs.y + obs.h / 2);
         } else if (obs.type === 'error') {
-            ctx.fillText(obs.text, Math.floor(obs.x - 2), Math.floor(obs.y + 20));
+            ctx.fillText(obs.text, obs.x - 2, obs.y + 20);
         } else {
-            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
+            ctx.fillText(obs.text, obs.x + 5, obs.y + 25);
         }
     }
 
-    // 상태 표시
     ctx.fillStyle = (phase === 1) ? 'black' : 'white';
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
-    // 수식 자물쇠 입력 UI 표시
     if (phase === 2 && subPhase === 1) {
         ctx.fillStyle = '#00ffff';
         ctx.font = 'bold 24px Arial';
         ctx.fillText(`입력 중: [ ${playerInput} ]`, 330, 80);
     }
 
-    // 게임 오버
     if (isGameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -326,12 +314,29 @@ function draw() {
     }
 }
 
-function gameLoop() {
-    update();
+// --- 🚀 프레임 드랍 완벽 방어 시스템 (고정 타임스텝) ---
+const TICK_RATE = 1000 / 60; 
+let lastTime = performance.now();
+let accumulator = 0;
+
+function gameLoop(timestamp) {
+    let deltaTime = timestamp - lastTime;
+    lastTime = timestamp;
+
+    if (deltaTime > 100) deltaTime = 100;
+
+    accumulator += deltaTime;
+
+    while (accumulator >= TICK_RATE) {
+        update();
+        accumulator -= TICK_RATE;
+    }
+
     draw();
-    if(!isGameOver) {
+
+    if (!isGameOver) {
         requestAnimationFrame(gameLoop);
     }
 }
 
-gameLoop();
+requestAnimationFrame(gameLoop);
