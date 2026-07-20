@@ -6,7 +6,7 @@ const playerImg = new Image();
 playerImg.src = 'player.png'; 
 
 // --- 게임 상태 변수 ---
-let phase = 1; 
+let phase = 3; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
