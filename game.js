@@ -30,7 +30,7 @@ const player = {
     
     // 도트 애니메이션용 추가 변수
     frameX: 0,       
-    frameCount: 6,   // ★ 프레임 수 6으로 수정 완료 ★
+    frameCount: 6,   
     animTimer: 0     
 };
 
@@ -117,7 +117,6 @@ function update() {
     let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
     if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
         player.animTimer++;
-        // ★ 애니메이션 템포 7로 수정 완료 ★
         if (player.animTimer % 7 === 0) { 
             player.frameX = (player.frameX + 1) % player.frameCount;
         }
@@ -125,7 +124,6 @@ function update() {
         player.frameX = 0; 
     }
 
-    // ★ 이동 속도 7로 수정 완료 ★
     let moveSpeed = 7; 
 
     if (phase === 1 || phase === 2) {
@@ -192,7 +190,6 @@ function update() {
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
-                // ★ 콜라와 풍선 사이 확실한 텀(대기시간) 확보 (-120으로 대폭 증가) ★
                 if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -120; } 
             }
         }
@@ -202,7 +199,6 @@ function update() {
                 let targetY = pattern[spawnCount];
                 spawnObstacle('balloon', '풍선', targetY, 9); 
                 spawnCount++;
-                // ★ 풍선과 음표 사이 텀 추가 ★
                 if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } 
             }
         }
@@ -249,13 +245,15 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            const codeSnippets = ['if (error) return;', 'console.log("init");', 'while (true) {', 'function reset()', 'await fetch(data);'];
+            // ★ 코드 텍스트를 짧게 줄이고, 너비(Hitbox)도 180에서 90으로 축소 ★
+            const codeSnippets = ['if(err)', 'init();', 'break;', 'reset()', 'fetch()'];
             const dataPattern = [310, 180, 310, 180, 310]; 
             
             if (spawnTimer > 0 && spawnTimer % 70 === 0 && spawnCount < dataPattern.length) {
                 let targetY = dataPattern[spawnCount];
                 let text = codeSnippets[spawnCount];
-                spawnObstacle('data', text, targetY, 8, 800, 180, 30); 
+                // 너비를 90으로 줄여서 피하기 쉽게 만듦
+                spawnObstacle('data', text, targetY, 8, 800, 90, 30); 
                 spawnCount++;
             } else if (spawnCount >= dataPattern.length && obstacles.length === 0) {
                 subPhase = 3; spawnTimer = -30;
