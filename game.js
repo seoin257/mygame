@@ -9,15 +9,15 @@ let spawnCount = 0;
 let score = 0;
 let isGameOver = false;
 
-// --- 플레이어 (사람 비율의 직사각형) ---
+// --- 플레이어 (사람 비율, 위치/점프력 재조정) ---
 const player = {
-    x: 250,        // 너무 왼쪽이 아니도록 오른쪽으로 이동
-    y: 270,        // 바닥(350) - 키(80)
-    w: 40,         // 너비
-    h: 80,         // 키 두 배로 증가
+    x: 180,        // 250에서 180으로 살짝 왼쪽으로 이동
+    y: 270,        
+    w: 40,         
+    h: 80,         
     vy: 0,
     gravity: 0.6,
-    jumpPower: -10.5, // 메뚜기 탈출 (점프력 약간 감소)
+    jumpPower: -11.2, // -12와 -10.5의 중간값으로 미세 조정!
     isJumping: false,
 };
 
@@ -34,7 +34,6 @@ window.addEventListener('keydown', (e) => {
 });
 
 // --- 장애물 생성 함수 ---
-// speed가 양수면 ← 방향 이동, 음수면 → 방향 이동
 function spawnObstacle(type, text, positionY, speed = 5, startX = 800) {
     obstacles.push({
         x: startX,
@@ -47,9 +46,8 @@ function spawnObstacle(type, text, positionY, speed = 5, startX = 800) {
     });
 }
 
-// --- 직사각형 충돌 감지 로직 (네모 vs 네모) ---
+// --- 직사각형 충돌 감지 로직 ---
 function checkCollision(p, obs) {
-    // 겹치지 않는 조건을 모두 뚫고 지나가면 충돌한 것
     return (
         p.x < obs.x + obs.w &&
         p.x + p.w > obs.x &&
@@ -66,7 +64,7 @@ function update() {
     player.vy += player.gravity;
     player.y += player.vy;
 
-    // 바닥 충돌 (Y 좌표 350이 바닥)
+    // 바닥 충돌
     if (player.y >= 350 - player.h) {
         player.y = 350 - player.h;
         player.vy = 0;
@@ -87,18 +85,24 @@ function update() {
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -30;
+                    spawnTimer = -30; // 약간 대기
                 }
             }
         }
         else if (subPhase === 1) {
-            // [1단계] 뒤에서 A 등장, 국자 공격 3번
+            // [1단계] 뒤에서 A 등장, 느낌표 띄우고 국자 공격 3번
             if (spawnTimer === 0) {
-                // A 캐릭터 등장 (플레이어 바로 뒤에 똑같은 크기로 딱 붙음)
-                backgroundCharacter = { text: 'A', x: player.x - 70, y: 270 };
+                // A 캐릭터 등장 및 경고(warning) 켜기
+                backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: true };
             }
-            if (spawnTimer > 0 && spawnTimer % 90 === 0) {
-                // 뒤에서 날아오는 국자! (A의 위치에서 생성되어 오른쪽으로 날아감)
+            
+            // 60프레임(약 1초)이 지나면 느낌표 경고 끄기
+            if (spawnTimer === 60) {
+                if(backgroundCharacter) backgroundCharacter.warning = false;
+            }
+
+            // 60프레임(경고 시간) 이후부터 90프레임 간격으로 공격 시작
+            if (spawnTimer > 60 && (spawnTimer - 60) % 90 === 0) {
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
@@ -110,7 +114,7 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // [2단계] 앞에서 바퀴벌레 등장, 피하면 A 사라짐
+            // [2단계] 앞에서 바퀴벌레 등장
             if (spawnTimer === 1) {
                 spawnObstacle('roach', '바퀴벌레', 310, 7);
             }
@@ -143,8 +147,8 @@ function update() {
             }
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
                 let isUp = (spawnCount % 2 === 0);
-                // 점프력이 줄었으므로 공중 장애물 위치도 약간 내림 (240 -> 250)
-                let posY = isUp ? 250 : 310; 
+                // 점프력이 살짝 높아졌으므로 공중 높이도 살짝 올림 (250 -> 245)
+                let posY = isUp ? 245 : 310; 
                 
                 spawnObstacle('balloon', '풍선', posY, 5);
                 spawnCount++;
@@ -163,7 +167,7 @@ function update() {
             }
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
                 let isUp = (spawnCount % 2 === 0);
-                let posY = isUp ? 250 : 310;
+                let posY = isUp ? 245 : 310;
                 
                 spawnObstacle('note', '음표', posY, 5);
                 spawnCount++;
@@ -178,7 +182,7 @@ function update() {
         else if (subPhase === 6) {
             if (obstacles.length === 0) {
                 backgroundCharacter = null; 
-                phase = 2; // 중반부로!
+                phase = 2; 
                 console.log("중반부 시작!");
             }
         }
@@ -194,7 +198,7 @@ function update() {
         }
     }
     
-    // 국자가 오른쪽 끝으로 날아가는 것도 삭제하도록 범위를 넓게 줍니다.
+    // 화면 밖으로 나간 장애물 삭제
     obstacles = obstacles.filter(obs => obs.x > -100 && obs.x < 1000);
 }
 
@@ -206,20 +210,27 @@ function draw() {
     ctx.fillStyle = '#333';
     ctx.fillRect(0, 350, 800, 50);
 
-    // 플레이어 (사람 몸통)
+    // 플레이어
     ctx.fillStyle = 'blue';
     ctx.fillRect(player.x, player.y, player.w, player.h);
     
-    // 배경 캐릭터 (A, B, C) - 플레이어와 동일한 크기
+    // 배경 캐릭터 (A, B, C)
     if (backgroundCharacter) {
         ctx.fillStyle = 'purple';
         ctx.fillRect(backgroundCharacter.x, backgroundCharacter.y, 40, 80);
         ctx.fillStyle = 'white';
         ctx.font = 'bold 20px Arial';
         ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
+
+        // 느낌표 경고가 켜져 있으면 머리 위에 렌더링
+        if (backgroundCharacter.warning) {
+            ctx.fillStyle = 'red';
+            ctx.font = 'bold 40px Arial';
+            ctx.fillText('!', backgroundCharacter.x + 15, backgroundCharacter.y - 15);
+        }
     }
 
-    // 장애물 (네모 + 단어)
+    // 장애물
     for (let obs of obstacles) {
         if(obs.type === 'attack') ctx.fillStyle = 'red';
         else if(obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
@@ -232,10 +243,12 @@ function draw() {
         ctx.fillText(obs.text, obs.x + 5, obs.y + 25);
     }
 
+    // 상태 표시
     ctx.fillStyle = 'black';
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
+    // 게임 오버
     if (isGameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
