@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- 게임 상태 변수 ---
-let phase = 1; // 1라운드부터 다시 시작해서 템포를 확인해 보세요!
+let phase = 1; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -85,6 +85,7 @@ function checkCollision(p, obs) {
 function update() {
     if (isGameOver) return;
 
+    // 플레이어 물리 엔진
     player.vy += player.gravity;
     player.y += player.vy;
 
@@ -94,12 +95,12 @@ function update() {
         player.isJumping = false;
     }
 
-    // 1. 초반부(Phase 1) 시나리오 엔진 (딜레이 대폭 축소)
+    // 1. 초반부(Phase 1) 시나리오 엔진 (빠른 템포 유지)
     if (phase === 1) {
         spawnTimer++;
 
         if (subPhase === 0) { 
-            if (spawnTimer >= 60) { // 70에서 60으로 콜라 나오는 속도 상향
+            if (spawnTimer >= 60) { 
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
@@ -120,18 +121,16 @@ function update() {
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
-                // 공격 3번 끝나면 대기시간 0으로 즉각 바퀴벌레 단계로!
                 if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = 0; } 
             }
         }
         else if (subPhase === 2) { 
-            // 바퀴벌레 즉시 출현
             if (spawnTimer === 1) spawnObstacle('roach', '바퀴벌레', 310, 7);
             
             let isRoachAlive = obstacles.find(obs => obs.type === 'roach');
             if (spawnTimer > 10 && !isRoachAlive) {
                 backgroundCharacter = null; 
-                subPhase = 3; spawnTimer = 0; // 끝나는 즉시 콜라 시작
+                subPhase = 3; spawnTimer = 0; 
             }
         }
         else if (subPhase === 3) { 
@@ -139,17 +138,17 @@ function update() {
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
-                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = 0; } // 딜레이 없이 B 등장
+                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = 0; }
             }
         }
         else if (subPhase === 4) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 70 === 0) { // 풍선 간격도 80에서 70으로 템포 업
+            if (spawnTimer > 0 && spawnTimer % 70 === 0) { 
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('balloon', '풍선', isUp ? 200 : 310, 5);
                 spawnCount++;
-                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -20; } // 대기시간 대폭 축소
+                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -20; } 
             }
         }
         else if (subPhase === 5) { 
@@ -167,7 +166,7 @@ function update() {
                 backgroundCharacter = null; 
                 phase = 2; 
                 subPhase = 0;
-                spawnTimer = -10; // 가상공간 전환도 빠르게
+                spawnTimer = -10; 
             }
         }
     }
@@ -178,9 +177,8 @@ function update() {
         spawnTimer++;
 
         if (subPhase === 0) {
-            // [0단계] 이지선다(상/하)로 확실히 피할 수 있게 수정된 에러 아이콘
+            // [0단계] 이지선다(상/하) 에러 아이콘
             if (spawnTimer > 0 && spawnTimer % 35 === 0) {
-                // true면 위(가만히 서있기), false면 아래(점프하기)
                 let isHigh = Math.random() > 0.5;
                 let targetY = isHigh ? 180 : 315; 
                 
@@ -226,15 +224,13 @@ function update() {
             }
 
             if (spawnTimer > 100 && obstacles.length === 0) {
-                phase = 3; 
-                subPhase = 0;
-                spawnTimer = 0;
-                console.log("후반부 시작!");
+                // 아직 후반부가 없으므로 여기서 게임 정지 및 클리어 처리
+                console.log("2라운드 클리어!");
             }
         }
     }
 
-    // 3. 장애물 이동 및 충돌 체크
+    // 장애물 이동 및 충돌 체크
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.x -= obs.speed; 
@@ -247,7 +243,7 @@ function update() {
     obstacles = obstacles.filter(obs => obs.x > -100 && obs.x < 1000);
 }
 
-// --- 그리기 로직 ---
+// --- 🎨 렌더링 로직 (Math.floor를 이용한 픽셀 쪼개짐 방지 최적화) ---
 function draw() {
     // 배경 테마 전환
     if (phase === 1) {
@@ -261,26 +257,26 @@ function draw() {
     ctx.fillStyle = (phase === 1) ? '#333' : '#00ffff'; 
     ctx.fillRect(0, 350, 800, 50);
 
-    // 플레이어
+    // 🚀 플레이어 최적화 렌더링
     ctx.fillStyle = (phase === 1) ? 'blue' : '#00ffff'; 
-    ctx.fillRect(player.x, player.y, player.w, player.h);
+    ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
     
     // 배경 캐릭터
     if (backgroundCharacter) {
         ctx.fillStyle = 'purple';
-        ctx.fillRect(backgroundCharacter.x, backgroundCharacter.y, 40, 80);
+        ctx.fillRect(Math.floor(backgroundCharacter.x), Math.floor(backgroundCharacter.y), 40, 80);
         ctx.fillStyle = 'white';
         ctx.font = 'bold 20px Arial';
-        ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
+        ctx.fillText(backgroundCharacter.text, Math.floor(backgroundCharacter.x + 12), Math.floor(backgroundCharacter.y + 45));
 
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
-            ctx.fillText('!', backgroundCharacter.x + 15, backgroundCharacter.y - 15);
+            ctx.fillText('!', Math.floor(backgroundCharacter.x + 15), Math.floor(backgroundCharacter.y - 15));
         }
     }
 
-    // 장애물 렌더링
+    // 🚀 장애물 최적화 렌더링
     for (let obs of obstacles) {
         if (obs.type === 'attack') ctx.fillStyle = 'red';
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
@@ -289,7 +285,7 @@ function draw() {
         else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
         else ctx.fillStyle = 'green';
 
-        ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
+        ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
         
         if (obs.type === 'hacker') ctx.fillStyle = '#00ff00'; 
         else if (obs.type === 'lock') ctx.fillStyle = 'gold'; 
@@ -298,11 +294,11 @@ function draw() {
         ctx.font = (obs.type === 'lock') ? 'bold 20px Arial' : '16px Arial';
         
         if (obs.type === 'lock') {
-            ctx.fillText(obs.text, obs.x + 5, obs.y + obs.h / 2);
+            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
         } else if (obs.type === 'error') {
-            ctx.fillText(obs.text, obs.x - 2, obs.y + 20);
+            ctx.fillText(obs.text, Math.floor(obs.x - 2), Math.floor(obs.y + 20));
         } else {
-            ctx.fillText(obs.text, obs.x + 5, obs.y + 25);
+            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
         }
     }
 
