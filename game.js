@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- 게임 상태 변수 ---
-let phase = 1; 
+let phase = 2; // ★ 여기서부터 시작하도록 1에서 2로 변경했습니다! ★
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -62,7 +62,7 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// --- 장애물 생성 함수 (너비, 높이 파라미터 추가) ---
+// --- 장애물 생성 함수 ---
 function spawnObstacle(type, text, positionY, speed = 5, startX = 800, w = 50, h = 40) {
     obstacles.push({
         x: startX,
@@ -99,11 +99,11 @@ function update() {
         player.isJumping = false;
     }
 
-    // 2. 시나리오 엔진 (Phase 1: 초반 / Phase 2: 중반)
+    // 2. 시나리오 엔진 
     if (phase === 1) {
         spawnTimer++;
 
-        if (subPhase === 0) { // 콜라 7개
+        if (subPhase === 0) { 
             if (spawnTimer >= 70) { 
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
@@ -111,7 +111,7 @@ function update() {
                 if (spawnCount >= 7) { subPhase = 1; spawnCount = 0; spawnTimer = 0; }
             }
         }
-        else if (subPhase === 1) { // A 등장 및 공격 3번
+        else if (subPhase === 1) { 
             if (spawnTimer === 1 && spawnCount === 0) {
                 backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: false };
             }
@@ -128,7 +128,7 @@ function update() {
                 if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; }
             }
         }
-        else if (subPhase === 2) { // 바퀴벌레
+        else if (subPhase === 2) { 
             if (spawnTimer === 1) spawnObstacle('roach', '바퀴벌레', 310, 7);
             
             let isRoachAlive = obstacles.find(obs => obs.type === 'roach');
@@ -137,7 +137,7 @@ function update() {
                 subPhase = 3; spawnTimer = 0;
             }
         }
-        else if (subPhase === 3) { // 콜라 5번
+        else if (subPhase === 3) { 
             if (spawnTimer >= 70) {
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
@@ -145,7 +145,7 @@ function update() {
                 if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -30; }
             }
         }
-        else if (subPhase === 4) { // B 등장 풍선 5개
+        else if (subPhase === 4) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
             
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
@@ -155,7 +155,7 @@ function update() {
                 if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; }
             }
         }
-        else if (subPhase === 5) { // C 등장 음표 5개
+        else if (subPhase === 5) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'C', x: 700, y: 270 }; 
             
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
@@ -165,13 +165,12 @@ function update() {
                 if (spawnCount >= 5) { subPhase = 6; spawnCount = 0; spawnTimer = 0; }
             }
         }
-        else if (subPhase === 6) { // 중반부(가상공간) 진입 준비
+        else if (subPhase === 6) { 
             if (obstacles.length === 0) {
                 backgroundCharacter = null; 
                 phase = 2; 
                 subPhase = 0;
-                spawnTimer = -30; // 전환 대기 시간
-                console.log("중반부(가상공간) 시작!");
+                spawnTimer = -30; 
             }
         }
     }
@@ -184,24 +183,20 @@ function update() {
         if (subPhase === 0) {
             // [0단계] 무작위 높이에서 엄청 빠르게 날아오는 에러 아이콘 7개
             if (spawnTimer > 0 && spawnTimer % 30 === 0) {
-                // 200 ~ 320 사이의 랜덤한 높이 생성
                 let randomY = Math.floor(Math.random() * 120) + 200;
-                
-                // 크기는 작고(30x30) 속도는 무지하게 빠름(11)
                 spawnObstacle('error', 'ERR', randomY, 11, 800, 30, 30);
                 spawnCount++;
 
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -60; // 자물쇠 나오기 전 긴장감 조성 대기
+                    spawnTimer = -60; 
                 }
             }
         }
         else if (subPhase === 1) {
-            // [1단계] 점프불가 수식 자물쇠 5개 (좁은 간격, 천천히)
+            // [1단계] 점프불가 수식 자물쇠 5개
             if (spawnTimer > 0 && spawnTimer % 90 === 0) {
-                // 팩토리얼이 포함된 5개의 수식 라인업
                 let equations = [
                     { q: '3! = ?', a: '6' },
                     { q: '2^4 = ?', a: '16' },
@@ -211,8 +206,6 @@ function update() {
                 ];
                 let eq = equations[spawnCount];
                 
-                // 자물쇠는 화면을 꽉 채우는 크기 (높이 300)로 설정해 점프 불가
-                // 속도는 2.5로 천천히 다가옴
                 obstacles.push({
                     x: 800, y: 50, w: 70, h: 300, type: 'lock', text: eq.q, mathAns: eq.a, speed: 2.5
                 });
@@ -222,14 +215,13 @@ function update() {
                 if (spawnCount >= 5) {
                     subPhase = 2;
                     spawnCount = 0;
-                    spawnTimer = -150; // 마지막 자물쇠 부술 시간 확보
+                    spawnTimer = -150; 
                 }
             }
         }
         else if (subPhase === 2) {
             // [2단계] 해커J 메시지
             if (spawnTimer === 0) {
-                // 머리 위(Y: 60)를 스쳐지나가는 얇고 긴 텍스트 (충돌박스 높이 20)
                 spawnObstacle('hacker', '해커J왔다감 /(^3^)/', 60, 7, 800, 250, 20);
             }
 
@@ -259,21 +251,21 @@ function update() {
 function draw() {
     // 배경 테마 전환
     if (phase === 1) {
-        ctx.fillStyle = '#ffffff'; // 초반부 하얀 배경
+        ctx.fillStyle = '#ffffff';
     } else {
-        ctx.fillStyle = '#0a0a1a'; // 중반부 가상공간 어두운 네이비 배경
+        ctx.fillStyle = '#0a0a1a';
     }
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
     // 바닥 테마 전환
-    ctx.fillStyle = (phase === 1) ? '#333' : '#00ffff'; // 가상공간은 형광 바닥
+    ctx.fillStyle = (phase === 1) ? '#333' : '#00ffff'; 
     ctx.fillRect(0, 350, 800, 50);
 
     // 플레이어
-    ctx.fillStyle = (phase === 1) ? 'blue' : '#00ffff'; // 가상공간 형광 캐릭터
+    ctx.fillStyle = (phase === 1) ? 'blue' : '#00ffff'; 
     ctx.fillRect(player.x, player.y, player.w, player.h);
     
-    // 배경 캐릭터 (초반부)
+    // 배경 캐릭터
     if (backgroundCharacter) {
         ctx.fillStyle = 'purple';
         ctx.fillRect(backgroundCharacter.x, backgroundCharacter.y, 40, 80);
@@ -293,22 +285,19 @@ function draw() {
         if (obs.type === 'attack') ctx.fillStyle = 'red';
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
         else if (obs.type === 'error') ctx.fillStyle = 'red';
-        else if (obs.type === 'lock') ctx.fillStyle = '#555'; // 자물쇠는 회색
-        else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; // 해커 메시지는 배경 투명
+        else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
+        else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
         else ctx.fillStyle = 'green';
 
         ctx.fillRect(obs.x, obs.y, obs.w, obs.h);
         
-        // 글씨색 설정
-        if (obs.type === 'hacker') ctx.fillStyle = '#00ff00'; // 해커는 초록 글씨
-        else if (obs.type === 'lock') ctx.fillStyle = 'gold'; // 자물쇠 수식은 금색
+        if (obs.type === 'hacker') ctx.fillStyle = '#00ff00'; 
+        else if (obs.type === 'lock') ctx.fillStyle = 'gold'; 
         else ctx.fillStyle = 'white';
         
-        // 장애물 종류별 텍스트 위치 보정
         ctx.font = (obs.type === 'lock') ? 'bold 20px Arial' : '16px Arial';
         
         if (obs.type === 'lock') {
-            // 자물쇠는 거대하므로 수식을 한가운데에 배치
             ctx.fillText(obs.text, obs.x + 5, obs.y + obs.h / 2);
         } else if (obs.type === 'error') {
             ctx.fillText(obs.text, obs.x - 2, obs.y + 20);
@@ -322,7 +311,7 @@ function draw() {
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
-    // 중반부(가상공간) 수식 자물쇠 입력 UI 표시
+    // 수식 자물쇠 입력 UI 표시
     if (phase === 2 && subPhase === 1) {
         ctx.fillStyle = '#00ffff';
         ctx.font = 'bold 24px Arial';
