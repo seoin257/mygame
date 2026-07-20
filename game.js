@@ -30,7 +30,7 @@ const player = {
     
     // 도트 애니메이션용 추가 변수
     frameX: 0,       
-    frameCount: 7,   // ★ 프레임 수 7로 확인 완료 ★
+    frameCount: 6,   // ★ 프레임 수 7로 확인 완료 ★
     animTimer: 0     
 };
 
@@ -117,7 +117,7 @@ function update() {
     let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
     if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
         player.animTimer++;
-        if (player.animTimer % 6 === 0) { 
+        if (player.animTimer % 7 === 0) { 
             player.frameX = (player.frameX + 1) % player.frameCount;
         }
     } else {
