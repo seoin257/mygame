@@ -17,7 +17,7 @@ const player = {
     h: 80,         
     vy: 0,
     gravity: 0.6,
-    jumpPower: -11.2, 
+    jumpPower: -12, 
     isJumping: false,
 };
 
