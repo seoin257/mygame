@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- 게임 상태 변수 ---
-let phase = 2; // ★ 여기서부터 시작하도록 1에서 2로 변경했습니다! ★
+let phase = 1; // 1라운드부터 다시 시작해서 템포를 확인해 보세요!
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -40,23 +40,19 @@ window.addEventListener('keydown', (e) => {
     if (phase === 2 && e.key >= '0' && e.key <= '9') {
         playerInput += e.key;
         
-        // 화면에 있는 자물쇠 중 가장 앞에 있는 것 찾기
         let target = obstacles.find(obs => obs.type === 'lock');
         
         if (target) {
-            // 정답이 완벽히 일치하면 자물쇠 파괴!
             if (target.mathAns === playerInput) {
                 obstacles = obstacles.filter(obs => obs !== target);
-                playerInput = ""; // 입력 초기화
+                playerInput = ""; 
             } 
-            // 누른 숫자가 정답의 앞부분과 다르면 (오타를 내면) 리셋
             else if (!target.mathAns.startsWith(playerInput)) {
                 playerInput = e.key; 
             }
         }
     }
     
-    // 백스페이스키로 입력 지우기
     if (phase === 2 && e.key === 'Backspace') {
         playerInput = playerInput.slice(0, -1);
     }
@@ -89,7 +85,6 @@ function checkCollision(p, obs) {
 function update() {
     if (isGameOver) return;
 
-    // 1. 플레이어 물리 엔진
     player.vy += player.gravity;
     player.y += player.vy;
 
@@ -99,12 +94,12 @@ function update() {
         player.isJumping = false;
     }
 
-    // 2. 시나리오 엔진 
+    // 1. 초반부(Phase 1) 시나리오 엔진 (딜레이 대폭 축소)
     if (phase === 1) {
         spawnTimer++;
 
         if (subPhase === 0) { 
-            if (spawnTimer >= 70) { 
+            if (spawnTimer >= 60) { // 70에서 60으로 콜라 나오는 속도 상향
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
@@ -125,40 +120,42 @@ function update() {
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
-                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; }
+                // 공격 3번 끝나면 대기시간 0으로 즉각 바퀴벌레 단계로!
+                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = 0; } 
             }
         }
         else if (subPhase === 2) { 
+            // 바퀴벌레 즉시 출현
             if (spawnTimer === 1) spawnObstacle('roach', '바퀴벌레', 310, 7);
             
             let isRoachAlive = obstacles.find(obs => obs.type === 'roach');
             if (spawnTimer > 10 && !isRoachAlive) {
                 backgroundCharacter = null; 
-                subPhase = 3; spawnTimer = 0;
+                subPhase = 3; spawnTimer = 0; // 끝나는 즉시 콜라 시작
             }
         }
         else if (subPhase === 3) { 
-            if (spawnTimer >= 70) {
+            if (spawnTimer >= 60) {
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
-                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -30; }
+                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = 0; } // 딜레이 없이 B 등장
             }
         }
         else if (subPhase === 4) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) {
+            if (spawnTimer > 0 && spawnTimer % 70 === 0) { // 풍선 간격도 80에서 70으로 템포 업
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('balloon', '풍선', isUp ? 200 : 310, 5);
                 spawnCount++;
-                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; }
+                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -20; } // 대기시간 대폭 축소
             }
         }
         else if (subPhase === 5) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'C', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) {
+            if (spawnTimer > 0 && spawnTimer % 70 === 0) {
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('note', '음표', isUp ? 200 : 310, 5);
                 spawnCount++;
@@ -170,27 +167,30 @@ function update() {
                 backgroundCharacter = null; 
                 phase = 2; 
                 subPhase = 0;
-                spawnTimer = -30; 
+                spawnTimer = -10; // 가상공간 전환도 빠르게
             }
         }
     }
     // ----------------------------------------------------------------
-    // 🖥️ Phase 2: 중반부 (가상공간)
+    // 2. 중반부(Phase 2) 가상공간 엔진
     // ----------------------------------------------------------------
     else if (phase === 2) {
         spawnTimer++;
 
         if (subPhase === 0) {
-            // [0단계] 무작위 높이에서 엄청 빠르게 날아오는 에러 아이콘 7개
-            if (spawnTimer > 0 && spawnTimer % 30 === 0) {
-                let randomY = Math.floor(Math.random() * 120) + 200;
-                spawnObstacle('error', 'ERR', randomY, 11, 800, 30, 30);
+            // [0단계] 이지선다(상/하)로 확실히 피할 수 있게 수정된 에러 아이콘
+            if (spawnTimer > 0 && spawnTimer % 35 === 0) {
+                // true면 위(가만히 서있기), false면 아래(점프하기)
+                let isHigh = Math.random() > 0.5;
+                let targetY = isHigh ? 180 : 315; 
+                
+                spawnObstacle('error', 'ERR', targetY, 11, 800, 30, 30);
                 spawnCount++;
 
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -60; 
+                    spawnTimer = -50; 
                 }
             }
         }
