@@ -84,26 +84,22 @@ function update() {
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = 0; // 콜라 끝나자마자 딜레이 없이 1단계 진입하여 정확히 1초 세기 시작
+                    spawnTimer = 0; 
                 }
             }
         }
         else if (subPhase === 1) {
             // [1단계] 1초 대기 -> 1초 경고(유지) -> 발사 (총 3번)
             if (spawnTimer === 1 && spawnCount === 0) {
-                // A 캐릭터 등장 (느낌표는 꺼진 상태로 대기)
                 backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: false };
             }
             
-            // 120프레임(2초)을 1사이클로 만듭니다.
             let cycle = spawnTimer % 120;
 
-            // 사이클의 60프레임(정확히 1초 대기 후) 도달 시 느낌표 ON!
             if (cycle === 60) {
                 if (backgroundCharacter) backgroundCharacter.warning = true;
             }
 
-            // 사이클의 120프레임(느낌표 켜지고 1초 유지 후, 즉 cycle 0) 도달 시 느낌표 OFF 및 공격!
             if (spawnTimer > 0 && cycle === 0) {
                 if (backgroundCharacter) backgroundCharacter.warning = false;
                 
@@ -113,7 +109,7 @@ function update() {
                 if (spawnCount >= 3) {
                     subPhase = 2;
                     spawnCount = 0;
-                    spawnTimer = -30; // 바퀴벌레 나오기 전 약간의 대기 시간
+                    spawnTimer = -30; 
                 }
             }
         }
@@ -151,7 +147,8 @@ function update() {
             }
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
                 let isUp = (spawnCount % 2 === 0);
-                let posY = isUp ? 245 : 310; 
+                // 키가 커진 플레이어를 위해 공중 장애물을 Y:200 으로 대폭 상향!
+                let posY = isUp ? 200 : 310; 
                 
                 spawnObstacle('balloon', '풍선', posY, 5);
                 spawnCount++;
@@ -170,7 +167,8 @@ function update() {
             }
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
                 let isUp = (spawnCount % 2 === 0);
-                let posY = isUp ? 245 : 310;
+                // 마찬가지로 음표도 Y:200 으로 대폭 상향!
+                let posY = isUp ? 200 : 310;
                 
                 spawnObstacle('note', '음표', posY, 5);
                 spawnCount++;
@@ -221,7 +219,6 @@ function draw() {
         ctx.font = 'bold 20px Arial';
         ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
 
-        // 느낌표가 true일 때만 빨간색 느낌표 렌더링
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
