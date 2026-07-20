@@ -84,26 +84,26 @@ function update() {
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -30; 
+                    spawnTimer = 0; // 콜라 끝나자마자 딜레이 없이 1단계 진입하여 정확히 1초 세기 시작
                 }
             }
         }
         else if (subPhase === 1) {
-            // [1단계] 공격 1초 전 느낌표 경고 후 국자 3번 발사
-            if (spawnTimer === 0) {
-                // A 캐릭터 등장 (이때 느낌표는 꺼진 상태)
+            // [1단계] 1초 대기 -> 1초 경고(유지) -> 발사 (총 3번)
+            if (spawnTimer === 1 && spawnCount === 0) {
+                // A 캐릭터 등장 (느낌표는 꺼진 상태로 대기)
                 backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: false };
             }
             
-            // 100프레임 주기로 패턴을 만듭니다.
-            let cycle = spawnTimer % 100;
+            // 120프레임(2초)을 1사이클로 만듭니다.
+            let cycle = spawnTimer % 120;
 
-            // 공격 시점(0)으로부터 60프레임(약 1초) 전인 '40'일 때 느낌표 ON
-            if (spawnTimer > 0 && cycle === 40) {
+            // 사이클의 60프레임(정확히 1초 대기 후) 도달 시 느낌표 ON!
+            if (cycle === 60) {
                 if (backgroundCharacter) backgroundCharacter.warning = true;
             }
 
-            // '0'이 되는 순간 (느낌표 켜지고 딱 1초 뒤) 느낌표 끄고 공격!
+            // 사이클의 120프레임(느낌표 켜지고 1초 유지 후, 즉 cycle 0) 도달 시 느낌표 OFF 및 공격!
             if (spawnTimer > 0 && cycle === 0) {
                 if (backgroundCharacter) backgroundCharacter.warning = false;
                 
@@ -113,7 +113,7 @@ function update() {
                 if (spawnCount >= 3) {
                     subPhase = 2;
                     spawnCount = 0;
-                    spawnTimer = -30;
+                    spawnTimer = -30; // 바퀴벌레 나오기 전 약간의 대기 시간
                 }
             }
         }
@@ -221,7 +221,7 @@ function draw() {
         ctx.font = 'bold 20px Arial';
         ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
 
-        // 느낌표가 true일 때만 경고 표시
+        // 느낌표가 true일 때만 빨간색 느낌표 렌더링
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
