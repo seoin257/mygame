@@ -151,7 +151,7 @@ function update() {
         if (keys['KeyD'] && drone.x < 800 - drone.w) drone.x += moveSpeed;
     }
 
-    // --- 🏃 캐릭터 A 애니메이션 처리 ---
+    // --- 🏃 캐릭터 A 슬라이딩 애니메이션 처리 ---
     if (backgroundCharacter) {
         if (backgroundCharacter.state === 'in') {
             backgroundCharacter.x += (backgroundCharacter.targetX - backgroundCharacter.x) * 0.1;
@@ -159,7 +159,7 @@ function update() {
                 backgroundCharacter.x = backgroundCharacter.targetX;
             }
         } else if (backgroundCharacter.state === 'out') {
-            backgroundCharacter.x -= 12; // 뒤로 빠르게 사라짐
+            backgroundCharacter.x -= 12; 
         }
     }
 
@@ -176,7 +176,6 @@ function update() {
         }
         else if (subPhase === 1) { 
             if (spawnTimer === 1 && spawnCount === 0) {
-                // A가 왼쪽 화면 밖(-100)에서 목표 위치(player.x - 70)로 스르륵 들어옴
                 backgroundCharacter = { text: 'A', x: -100, targetX: player.x - 70, y: 270, warning: false, state: 'in' };
             }
             let cycle = spawnTimer % 120;
@@ -193,7 +192,6 @@ function update() {
         else if (subPhase === 2) { 
             if (spawnTimer === 1) {
                 spawnObstacle('cockroach', '', 310, 7);
-                // 바퀴벌레가 나오자마자 A가 왼쪽으로 도망감
                 if (backgroundCharacter) backgroundCharacter.state = 'out';
             }
             let isRoachAlive = obstacles.find(obs => obs.type === 'cockroach');
@@ -301,7 +299,6 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // ★ 미사일 개수를 25개로 늘리고 간격을 40프레임으로 압축 (라운드 시간 증가)
             if (spawnTimer > 60 && spawnTimer % 40 === 0 && spawnCount < 25) {
                 let missileY = Math.floor(Math.random() * 250) + 50; 
                 spawnObstacle('missile', '', missileY, 9, 800, 50, 25);
@@ -353,6 +350,7 @@ function update() {
                     let isGround = Math.random() > 0.4; 
                     let zombieY = isGround ? (270 + Math.random() * 40) : (Math.random() * 200 + 50);
                     let zombieSpeed = 3 + Math.random() * 2.5; 
+                    
                     let randZombie = 'zombie' + (Math.floor(Math.random() * 4) + 1);
                     spawnObstacle(randZombie, '', zombieY, zombieSpeed, 800, 40, 40);
                 }
@@ -371,22 +369,21 @@ function update() {
         }
     }
 
-    // --- 🌟 히트박스 자동화 (원본 이미지 크기에 맞춤) ---
+    // --- 🌟 히트박스 자동화 (비율 유지, 크기 보정) ---
     for (let obs of obstacles) {
         let img = images[obs.type];
         if (img && img.complete && img.width > 0 && !obs.resized) {
             let oldH = obs.h;
-            let isGround = (obs.y + oldH >= 349); // 바닥에 붙은 장애물인지 확인
+            let isGround = (obs.y + oldH >= 349); 
             
-            obs.w = img.width;
-            obs.h = img.height;
+            // 비율(가로/세로) 계산 후 높이는 그대로, 너비만 비율에 맞춰 조정
+            let ratio = img.width / img.height;
             
-            // 땅에 있던 물체면 이미지가 커져도 바닥에 붙도록 위로 밀어올림
+            obs.h = oldH;
+            obs.w = oldH * ratio;
+            
             if (isGround) {
-                obs.y = 350 - obs.h;
-            } else {
-                // 공중 물체는 중심으로 퍼지게 설정
-                obs.y -= (obs.h - oldH) / 2;
+                obs.y = 350 - obs.h; 
             }
             obs.resized = true;
         }
@@ -397,7 +394,6 @@ function update() {
         let obs = obstacles[i];
         obs.x -= obs.speed; 
         
-        // ★ 플레이어를 지나쳐 화면 밖으로 나간 좀비는 무조건 게임 오버!
         if (phase === 4 && obs.type.startsWith('zombie') && (obs.x + obs.w < 0)) {
             isGameOver = true;
         }
@@ -417,13 +413,11 @@ function pCheckCollisionOnly(p, obs) {
 
 // --- 🎨 렌더링 로직 ---
 function draw() {
-    // 배경
     if (phase === 1) ctx.fillStyle = '#ffffff';
     else if (phase === 2) ctx.fillStyle = '#0a0a1a';
     else ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
-    // 바닥
     ctx.fillStyle = (phase === 2) ? '#00ffff' : '#333'; 
     ctx.fillRect(0, 350, 800, 50);
 
@@ -452,11 +446,13 @@ function draw() {
         }
     }
     
-    // 👤 배경 캐릭터 A (원본 사이즈 기준 드로잉)
+    // 👤 배경 캐릭터 A (비율 유지 리사이징)
     if (backgroundCharacter) {
         let imgA = images.humanA;
         if (imgA && imgA.complete && imgA.width > 0) {
-            ctx.drawImage(imgA, Math.floor(backgroundCharacter.x), 350 - imgA.height);
+            let aHeight = 80;
+            let aWidth = aHeight * (imgA.width / imgA.height);
+            ctx.drawImage(imgA, Math.floor(backgroundCharacter.x), 350 - aHeight, aWidth, aHeight);
         } else {
             ctx.fillStyle = 'purple';
             ctx.fillRect(Math.floor(backgroundCharacter.x), 350 - 80, 40, 80);
@@ -466,13 +462,10 @@ function draw() {
 
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red'; ctx.font = 'bold 40px Arial';
-            // A의 머리 위에 띄우기 위해 위치 동적 조절
-            let warnY = (imgA && imgA.complete) ? (350 - imgA.height - 15) : (350 - 95);
-            ctx.fillText('!', Math.floor(backgroundCharacter.x + 15), warnY);
+            ctx.fillText('!', Math.floor(backgroundCharacter.x + 15), 350 - 95);
         }
     }
 
-    // 안내 텍스트들
     if (phase === 3 && subPhase === 2 && spawnTimer < 120) {
         ctx.fillStyle = 'black'; ctx.font = 'bold 30px Arial';
         ctx.fillText("WASD로 조종하여 미사일을 피하세요!", 130, 150);
@@ -503,7 +496,6 @@ function draw() {
             }
         }
         
-        // 텍스트 랜더링 (해커 글자색 흰색으로 변경)
         if (obs.text !== '') {
             if (obs.type === 'lock') {
                 ctx.fillStyle = 'white'; 
@@ -514,7 +506,7 @@ function draw() {
                 ctx.font = 'bold 16px Courier New'; 
                 ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 20));
             } else if (obs.type === 'hacker') {
-                ctx.fillStyle = 'white'; // ★ 흰색으로 변경 완료
+                ctx.fillStyle = 'white'; 
                 ctx.font = '16px Arial';
                 ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
             } else {
@@ -525,7 +517,6 @@ function draw() {
         }
     }
 
-    // UI 정보
     ctx.fillStyle = (phase === 1) ? 'black' : 'white';
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
@@ -537,7 +528,6 @@ function draw() {
         ctx.fillText(`입력 중: [ ${playerInput} ]`, 330, 80);
     }
 
-    // 게임 오버 / 클리어 처리
     if (isGameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
         ctx.fillStyle = 'red'; ctx.font = '40px Arial'; ctx.fillText("GAME OVER", 280, 200);
