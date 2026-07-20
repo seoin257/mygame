@@ -117,7 +117,7 @@ function update() {
     if (!player.isJumping) {
         player.animTimer++;
         // 프레임 수가 많아졌으므로 8에서 6으로 템포를 살짝 당겨 부드럽게 재생
-        if (player.animTimer % 6 === 0) { 
+        if (player.animTimer % 7 === 0) { 
             player.frameX = (player.frameX + 1) % player.frameCount;
         }
     } else {
@@ -470,7 +470,7 @@ function draw() {
         ctx.fillText("CLEAR!", 300, 200);
         ctx.fillStyle = 'black';
         ctx.font = '20px Arial';
-        ctx.fillText("모든 미션을 완수했습니다!", 280, 240);
+        ctx.fillText("CLEAR!", 280, 240);
     }
 }
 
