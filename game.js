@@ -18,21 +18,28 @@ let playerInput = "";
 const keys = {};
 
 // --- 플레이어 (7프레임 애니메이션 적용!) ---
-const player = {
-    x: 180,        
-    y: 270,        
-    w: 40,         
-    h: 80,         
-    vy: 0,
-    gravity: 0.6,
-    jumpPower: -11.2, 
-    isJumping: false,
+// 🌟 플레이어 그리기 로직 교체
+if (playerImg.complete && playerImg.width > 0) {
+    // 1. 전체 가로 길이를 7프레임으로 나눕니다.
+    let frameWidth = playerImg.width / player.frameCount; 
+    let frameHeight = playerImg.height;
+
+    // 2. 현재 frameX(0~6)에 해당하는 X좌표를 계산하여 잘라냅니다.
+    // Math.floor를 사용하여 좌표를 딱딱 떨어지게 만듭니다.
+    let sourceX = Math.floor(player.frameX * frameWidth);
     
-    // 도트 애니메이션용 추가 변수
-    frameX: 0,       
-    frameCount: 7,   // ★ 4에서 7로 변경! ★
-    animTimer: 0     
-};
+    ctx.drawImage(
+        playerImg,
+        sourceX, 0,             // 원본 이미지에서 잘라낼 시작점 (X, Y)
+        frameWidth, frameHeight,// 잘라낼 영역 크기
+        Math.floor(player.x), Math.floor(player.y), // 캔버스에 그릴 위치
+        player.w, player.h      // 캔버스에 그릴 크기 (40x80)
+    );
+} else {
+    // 이미지가 아직 로딩 안 됐을 때 표시할 임시 박스
+    ctx.fillStyle = 'blue'; 
+    ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
+}
 
 // --- 드론 ---
 const drone = {
