@@ -30,7 +30,7 @@ const player = {
     
     // 도트 애니메이션용 추가 변수
     frameX: 0,       
-    frameCount: 7,   // ★ 4에서 7로 변경! ★
+    frameCount: 6,   // ★ 4에서 7로 변경! ★
     animTimer: 0     
 };
 
