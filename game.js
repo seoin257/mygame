@@ -30,7 +30,7 @@ const player = {
     
     // 도트 애니메이션용 추가 변수
     frameX: 0,       
-    frameCount: 6,   // ★ 4에서 7로 변경! ★
+    frameCount: 7,   // ★ 프레임 수 7로 확인 완료 ★
     animTimer: 0     
 };
 
@@ -114,14 +114,14 @@ function update() {
     if (isGameOver || isGameClear) return;
 
     // --- 🏃 플레이어 7프레임 애니메이션 업데이트 ---
-    if (!player.isJumping) {
+    let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
+    if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
         player.animTimer++;
-        // 프레임 수가 많아졌으므로 8에서 6으로 템포를 살짝 당겨 부드럽게 재생
-        if (player.animTimer % 7 === 0) { 
+        if (player.animTimer % 6 === 0) { 
             player.frameX = (player.frameX + 1) % player.frameCount;
         }
     } else {
-        player.frameX = 0; // 점프 중일 때는 0번 프레임 고정 (원하는 번호로 변경 가능)
+        player.frameX = 0;
     }
 
     let moveSpeed = 6;
@@ -194,26 +194,27 @@ function update() {
             }
         }
         else if (subPhase === 4) { 
-            if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) { 
-                let isUp = (spawnCount % 2 === 0);
-                spawnObstacle('balloon', '풍선', isUp ? 200 : 310, 5);
+            // B 캐릭터 삭제 및 풍선 패턴 고정 (아래 위 위 아래 아래), 간격 좁고 빠르게
+            if (spawnTimer > 0 && spawnTimer % 45 === 0) { 
+                const pattern = [310, 200, 200, 310, 310]; // 높이 배열
+                let targetY = pattern[spawnCount];
+                spawnObstacle('balloon', '풍선', targetY, 9); // 속도 9 (빠름)
                 spawnCount++;
-                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } 
+                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -30; } 
             }
         }
         else if (subPhase === 5) { 
-            if (spawnTimer === 0) backgroundCharacter = { text: 'C', x: 700, y: 270 }; 
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) { 
-                let isUp = (spawnCount % 2 === 0);
-                spawnObstacle('note', '음표', isUp ? 200 : 310, 5);
+            // C 캐릭터 삭제 및 음표 패턴 고정 (아래 위 위 아래 아래)
+            if (spawnTimer > 0 && spawnTimer % 45 === 0) { 
+                const pattern = [310, 200, 200, 310, 310];
+                let targetY = pattern[spawnCount];
+                spawnObstacle('note', '음표', targetY, 9);
                 spawnCount++;
                 if (spawnCount >= 5) { subPhase = 6; spawnCount = 0; spawnTimer = 0; }
             }
         }
         else if (subPhase === 6) { 
             if (obstacles.length === 0) {
-                backgroundCharacter = null; 
                 phase = 2; subPhase = 0; spawnTimer = -30;  
             }
         }
@@ -242,20 +243,21 @@ function update() {
                 spawnCount++;
             }
             if (spawnCount >= 5 && obstacles.length === 0) {
-                subPhase = 2; spawnCount = 0; spawnTimer = 0; 
+                subPhase = 2; spawnCount = 0; spawnTimer = -30; 
             }
         }
         else if (subPhase === 2) {
-            const dataWords = ['DATA', 'INFO', '0101', 'CODE', '404', 'BYTE', 'BUG', 'RAM'];
-            if (spawnTimer <= 900) {
-                if (spawnTimer % 22 === 0) {
-                    let randomWord = dataWords[Math.floor(Math.random() * dataWords.length)];
-                    let isHigh = Math.random() > 0.5;
-                    let targetY = isHigh ? 200 : 310;
-                    let randomSpeed = Math.floor(Math.random() * 3) + 7; 
-                    spawnObstacle('data', randomWord, targetY, randomSpeed, 800, 50, 35);
-                }
-            } else if (obstacles.length === 0) {
+            // 정보 와랄라 패턴 고정 및 영문 코드로 변경 (깰 수 있게)
+            const codeSnippets = ['if (error) return;', 'console.log("init");', 'while (true) {', 'function reset()', 'await fetch(data);'];
+            const dataPattern = [310, 180, 310, 180, 310]; // 점프, 서있기, 점프, 서있기, 점프
+            
+            if (spawnTimer > 0 && spawnTimer % 70 === 0 && spawnCount < dataPattern.length) {
+                let targetY = dataPattern[spawnCount];
+                let text = codeSnippets[spawnCount];
+                // 글씨가 길기 때문에 너비를 180으로 늘림 (배경은 투명처리됨)
+                spawnObstacle('data', text, targetY, 8, 800, 180, 30); 
+                spawnCount++;
+            } else if (spawnCount >= dataPattern.length && obstacles.length === 0) {
                 subPhase = 3; spawnTimer = -30;
             }
         }
@@ -288,10 +290,11 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            if (spawnTimer > 120 && spawnTimer % 50 === 0 && spawnCount < 10) {
-                let holeY = Math.floor(Math.random() * 150) + 50; 
-                spawnObstacle('wall', '', 0, 7, 800, 60, holeY);
-                spawnObstacle('wall', '', holeY + 90, 7, 800, 60, 350 - (holeY + 90));
+            // 벽(구멍) 삭제 -> 단일 미사일(🚀) 회피로 변경
+            if (spawnTimer > 60 && spawnTimer % 45 === 0 && spawnCount < 10) {
+                let missileY = Math.floor(Math.random() * 250) + 50; 
+                // 속도 12, 너비 40, 높이 20의 미사일 객체
+                spawnObstacle('missile', '🚀', missileY, 12, 800, 40, 20);
                 spawnCount++;
             }
             if (spawnCount >= 10 && obstacles.length === 0) {
@@ -362,19 +365,17 @@ function draw() {
 
     // 🌟 플레이어 그리기 (이미지가 로드되었으면 도트로, 아니면 기존 네모로)
     if (playerImg.complete && playerImg.width > 0) {
-        // ★ 7프레임의 크기를 자동으로 계산해서 잘라냅니다! ★
-        let frameWidth = playerImg.width / player.frameCount; 
+        let frameWidth = Math.floor(playerImg.width / player.frameCount); 
         let frameHeight = playerImg.height;
 
         ctx.drawImage(
             playerImg,
-            player.frameX * frameWidth, 0, // 원본 이미지에서 잘라낼 X, Y 위치
-            frameWidth, frameHeight,       // 원본 이미지에서 잘라낼 너비, 높이
-            Math.floor(player.x), Math.floor(player.y), // 캔버스에 그릴 위치
-            player.w, player.h             // 캔버스에 그릴 크기 (40x80)
+            Math.floor(player.frameX * frameWidth), 0, 
+            frameWidth, frameHeight,       
+            Math.floor(player.x), Math.floor(player.y), 
+            player.w, player.h             
         );
     } else {
-        // 이미지가 로딩 중이거나 경로가 틀렸을 때 표시할 임시 파란 네모
         ctx.fillStyle = (phase === 2) ? '#00ffff' : 'blue'; 
         ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
     }
@@ -404,7 +405,7 @@ function draw() {
     if (phase === 3 && subPhase === 2 && spawnTimer < 120) {
         ctx.fillStyle = 'black';
         ctx.font = 'bold 30px Arial';
-        ctx.fillText("WASD로 조종하여 장애물을 피하세요!", 130, 150);
+        ctx.fillText("WASD로 조종하여 미사일을 피하세요!", 130, 150);
     }
     if (phase === 4 && subPhase === 0) {
         ctx.fillStyle = 'black';
@@ -413,12 +414,14 @@ function draw() {
         ctx.fillText("WASD와 스페이스바를 이용해 다가오는 장애물을 치우시오.", 110, 170);
     }
 
+    // 장애물 렌더링
     for (let obs of obstacles) {
+        // 배경색 결정
         if (obs.type === 'attack') ctx.fillStyle = 'red';
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
         else if (obs.type === 'error') ctx.fillStyle = 'red';
         else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
-        else if (obs.type === 'data') ctx.fillStyle = '#0088ff'; 
+        else if (obs.type === 'data' || obs.type === 'missile') ctx.fillStyle = 'transparent'; // 데이터와 미사일은 배경 투명
         else if (obs.type === 'wall') ctx.fillStyle = '#444';
         else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
         else if (obs.type === 'gem') ctx.fillStyle = '#FF00FF'; 
@@ -427,16 +430,31 @@ function draw() {
 
         ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
         
-        if (obs.type === 'hacker') ctx.fillStyle = '#00ff00'; 
-        else if (obs.type === 'lock') ctx.fillStyle = 'gold'; 
-        else ctx.fillStyle = 'white';
-        
-        ctx.font = (obs.type === 'gem') ? '14px Arial' : (obs.type === 'lock' ? 'bold 20px Arial' : '16px Arial');
+        // 텍스트/이모지 렌더링
+        if (obs.type === 'hacker') {
+            ctx.fillStyle = '#00ff00'; 
+            ctx.font = '16px Arial';
+        } else if (obs.type === 'lock') {
+            ctx.fillStyle = 'gold'; 
+            ctx.font = 'bold 20px Arial';
+        } else if (obs.type === 'data') {
+            ctx.fillStyle = 'white'; // 하얀색 글자
+            ctx.font = 'bold 16px Courier New'; // 코드 느낌의 폰트
+        } else if (obs.type === 'missile') {
+            ctx.font = '24px Arial'; // 미사일 이모지 크기
+        } else {
+            ctx.fillStyle = 'white';
+            ctx.font = (obs.type === 'gem') ? '14px Arial' : '16px Arial';
+        }
         
         if (obs.type === 'lock') {
             ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
         } else if (obs.type === 'error') {
             ctx.fillText(obs.text, Math.floor(obs.x - 2), Math.floor(obs.y + 20));
+        } else if (obs.type === 'data') {
+            ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 20));
+        } else if (obs.type === 'missile') {
+            ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 18));
         } else if (obs.text !== '') {
             ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
         }
@@ -446,7 +464,12 @@ function draw() {
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
+    // 자물쇠 안내 메시지 추가
     if (phase === 2 && subPhase === 1) {
+        ctx.fillStyle = 'white';
+        ctx.font = '14px Arial';
+        ctx.fillText("자물쇠의 수식에 맞는 정답을 숫자로 입력하세요", 260, 50);
+
         ctx.fillStyle = '#00ffff';
         ctx.font = 'bold 24px Arial';
         ctx.fillText(`입력 중: [ ${playerInput} ]`, 330, 80);
@@ -470,7 +493,7 @@ function draw() {
         ctx.fillText("CLEAR!", 300, 200);
         ctx.fillStyle = 'black';
         ctx.font = '20px Arial';
-        ctx.fillText("CLEAR!", 280, 240);
+        ctx.fillText("모든 미션을 완수했습니다!", 280, 240);
     }
 }
 
