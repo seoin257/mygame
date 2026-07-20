@@ -361,28 +361,18 @@ function draw() {
     ctx.fillRect(0, 350, 800, 50);
 
     // 🌟 플레이어 그리기 (이미지가 로드되었으면 도트로, 아니면 기존 네모로)
-// [교체할 줄 번호: 233 ~ 249 부근]
-if (playerImg.complete && playerImg.width > 0) {
-    // 1. 이미지 전체 너비를 7로 나눠 한 프레임의 정확한 너비를 구함
-    let frameWidth = playerImg.width / 7; 
-    let frameHeight = playerImg.height;
+    if (playerImg.complete && playerImg.width > 0) {
+        // ★ 7프레임의 크기를 자동으로 계산해서 잘라냅니다! ★
+        let frameWidth = playerImg.width / player.frameCount; 
+        let frameHeight = playerImg.height;
 
-    // 2. 현재 프레임(0~6)에 맞춰서 잘라낼 시작 X 좌표
-    let sx = player.frameX * frameWidth;
-    
-    // 3. 캔버스에 그릴 고정된 좌표
-    let dx = Math.floor(player.x);
-    let dy = Math.floor(player.y);
-
-    // 4. 명확하게 9개 인자를 모두 사용하여 잘라내기
-    ctx.drawImage(
-        playerImg,
-        sx, 0,             // [소스] 잘라낼 시작 X, Y
-        frameWidth, frameHeight, // [소스] 잘라낼 가로, 세로 크기
-        dx, dy,            // [목적지] 캔버스에 그릴 X, Y
-        player.w, player.h // [목적지] 캔버스에 그릴 가로, 세로 크기
-    );
-}
+        ctx.drawImage(
+            playerImg,
+            player.frameX * frameWidth, 0, // 원본 이미지에서 잘라낼 X, Y 위치
+            frameWidth, frameHeight,       // 원본 이미지에서 잘라낼 너비, 높이
+            Math.floor(player.x), Math.floor(player.y), // 캔버스에 그릴 위치
+            player.w, player.h             // 캔버스에 그릴 크기 (40x80)
+        );
     } else {
         // 이미지가 로딩 중이거나 경로가 틀렸을 때 표시할 임시 파란 네모
         ctx.fillStyle = (phase === 2) ? '#00ffff' : 'blue'; 
