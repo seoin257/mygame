@@ -2,7 +2,7 @@ const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
 // --- 게임 상태 변수 ---
-let phase = 2; 
+let phase = 1; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -36,8 +36,8 @@ window.addEventListener('keydown', (e) => {
         player.isJumping = true;
     }
 
-    // 중반부(Phase 2) 숫자 타이핑 로직
-    if (phase === 2 && e.key >= '0' && e.key <= '9') {
+    // 중반부(Phase 2 - subPhase 1) 숫자 타이핑 로직
+    if (phase === 2 && subPhase === 1 && e.key >= '0' && e.key <= '9') {
         playerInput += e.key;
         
         let target = obstacles.find(obs => obs.type === 'lock');
@@ -53,7 +53,7 @@ window.addEventListener('keydown', (e) => {
         }
     }
     
-    if (phase === 2 && e.key === 'Backspace') {
+    if (phase === 2 && subPhase === 1 && e.key === 'Backspace') {
         playerInput = playerInput.slice(0, -1);
     }
 });
@@ -95,12 +95,12 @@ function update() {
         player.isJumping = false;
     }
 
-    // 1. 초반부(Phase 1) 시나리오 엔진 (여유로운 템포로 복구)
+    // 1. 초반부(Phase 1) 시나리오 엔진
     if (phase === 1) {
         spawnTimer++;
 
         if (subPhase === 0) { 
-            if (spawnTimer >= 70) {  // 60 -> 70으로 복구
+            if (spawnTimer >= 70) { 
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
@@ -121,7 +121,7 @@ function update() {
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
-                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; } // 대기시간 -30 복구
+                if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; } 
             }
         }
         else if (subPhase === 2) { 
@@ -134,27 +134,27 @@ function update() {
             }
         }
         else if (subPhase === 3) { 
-            if (spawnTimer >= 70) {  // 60 -> 70으로 복구
+            if (spawnTimer >= 70) { 
                 spawnObstacle('cola', '콜라', 310);
                 spawnCount++;
                 spawnTimer = 0;
-                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -30; } // 대기시간 -30 복구
+                if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -30; } 
             }
         }
         else if (subPhase === 4) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'B', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) {  // 70 -> 80으로 복구
+            if (spawnTimer > 0 && spawnTimer % 80 === 0) { 
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('balloon', '풍선', isUp ? 200 : 310, 5);
                 spawnCount++;
-                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } // 대기시간 -80 복구
+                if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } 
             }
         }
         else if (subPhase === 5) { 
             if (spawnTimer === 0) backgroundCharacter = { text: 'C', x: 700, y: 270 }; 
             
-            if (spawnTimer > 0 && spawnTimer % 80 === 0) {  // 70 -> 80으로 복구
+            if (spawnTimer > 0 && spawnTimer % 80 === 0) { 
                 let isUp = (spawnCount % 2 === 0);
                 spawnObstacle('note', '음표', isUp ? 200 : 310, 5);
                 spawnCount++;
@@ -166,7 +166,7 @@ function update() {
                 backgroundCharacter = null; 
                 phase = 2; 
                 subPhase = 0;
-                spawnTimer = -30;  // 전환 대기시간 -30 복구
+                spawnTimer = -30;  
             }
         }
     }
@@ -177,22 +177,24 @@ function update() {
         spawnTimer++;
 
         if (subPhase === 0) {
-            if (spawnTimer > 0 && spawnTimer % 35 === 0) {
-                let isHigh = Math.random() > 0.5;
-                let targetY = isHigh ? 180 : 315; 
-                
-                spawnObstacle('error', 'ERR', targetY, 11, 800, 30, 30);
+            // [0단계] 고정 순서 에러 아이콘 5개 (아래, 아래, 위, 아래, 위)
+            const errorPattern = [315, 315, 180, 315, 180]; // 315: 아래(점프), 180: 위(서있기)
+            
+            if (spawnTimer > 0 && spawnTimer % 50 === 0 && spawnCount < errorPattern.length) {
+                let targetY = errorPattern[spawnCount];
+                spawnObstacle('error', 'ERR', targetY, 10, 800, 35, 30);
                 spawnCount++;
+            }
 
-                if (spawnCount >= 7) {
-                    subPhase = 1;
-                    spawnCount = 0;
-                    spawnTimer = -60; // 전환 대기시간 넉넉하게 -60
-                }
+            if (spawnCount >= errorPattern.length && obstacles.length === 0) {
+                subPhase = 1;
+                spawnCount = 0;
+                spawnTimer = -40; // 자물쇠 전 대기시간
             }
         }
         else if (subPhase === 1) {
-            if (spawnTimer > 0 && spawnTimer % 90 === 0) {
+            // [1단계] 속도가 늦춰진 수식 자물쇠 5개 (속도: 1.5)
+            if (spawnTimer > 0 && spawnTimer % 110 === 0 && spawnCount < 5) {
                 let equations = [
                     { q: '3! = ?', a: '6' },
                     { q: '2^4 = ?', a: '16' },
@@ -203,25 +205,46 @@ function update() {
                 let eq = equations[spawnCount];
                 
                 obstacles.push({
-                    x: 800, y: 50, w: 70, h: 300, type: 'lock', text: eq.q, mathAns: eq.a, speed: 2.5
+                    x: 800, y: 50, w: 70, h: 300, type: 'lock', text: eq.q, mathAns: eq.a, speed: 1.5
                 });
                 
                 spawnCount++;
+            }
 
-                if (spawnCount >= 5) {
-                    subPhase = 2;
-                    spawnCount = 0;
-                    spawnTimer = -150; 
-                }
+            // 자물쇠 5개가 모두 파괴되면 다음 단계로
+            if (spawnCount >= 5 && obstacles.length === 0) {
+                subPhase = 2;
+                spawnCount = 0;
+                spawnTimer = 0; // 정보 과부하 시작
             }
         }
         else if (subPhase === 2) {
+            // [2단계] 15초간(900프레임) 정보/데이터 장애물 폭풍
+            const dataWords = ['DATA', 'INFO', '0101', 'CODE', '404', 'BYTE', 'BUG', 'RAM'];
+
+            if (spawnTimer <= 900) {
+                if (spawnTimer % 22 === 0) {
+                    let randomWord = dataWords[Math.floor(Math.random() * dataWords.length)];
+                    let isHigh = Math.random() > 0.5;
+                    let targetY = isHigh ? 200 : 310;
+                    let randomSpeed = Math.floor(Math.random() * 3) + 7; // 7~9 속도
+                    
+                    spawnObstacle('data', randomWord, targetY, randomSpeed, 800, 50, 35);
+                }
+            } else if (obstacles.length === 0) {
+                // 15초 경과 및 장애물 클리어 후 해커J 메시지로 진입
+                subPhase = 3;
+                spawnTimer = -30;
+            }
+        }
+        else if (subPhase === 3) {
+            // [3단계] 해커J 메시지
             if (spawnTimer === 0) {
-                spawnObstacle('hacker', '해커J왔다감 /(^3^)/', 60, 7, 800, 250, 20);
+                spawnObstacle('hacker', '해커J왔다감 /(^3^)/', 60, 6, 800, 250, 20);
             }
 
             if (spawnTimer > 100 && obstacles.length === 0) {
-                console.log("2라운드 클리어! 후반부 대기 중...");
+                console.log("2라운드 클리어!");
             }
         }
     }
@@ -273,6 +296,7 @@ function draw() {
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
         else if (obs.type === 'error') ctx.fillStyle = 'red';
         else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
+        else if (obs.type === 'data') ctx.fillStyle = '#0088ff'; // 데이터 장애물은 사이버 블루
         else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
         else ctx.fillStyle = 'green';
 
