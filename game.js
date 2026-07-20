@@ -9,15 +9,15 @@ let spawnCount = 0;
 let score = 0;
 let isGameOver = false;
 
-// --- 플레이어 (사람 비율, 위치/점프력 재조정) ---
+// --- 플레이어 ---
 const player = {
-    x: 180,        // 250에서 180으로 살짝 왼쪽으로 이동
+    x: 180,        
     y: 270,        
     w: 40,         
     h: 80,         
     vy: 0,
     gravity: 0.6,
-    jumpPower: -11.2, // -12와 -10.5의 중간값으로 미세 조정!
+    jumpPower: -11.2, 
     isJumping: false,
 };
 
@@ -64,7 +64,6 @@ function update() {
     player.vy += player.gravity;
     player.y += player.vy;
 
-    // 바닥 충돌
     if (player.y >= 350 - player.h) {
         player.y = 350 - player.h;
         player.vy = 0;
@@ -85,24 +84,29 @@ function update() {
                 if (spawnCount >= 7) {
                     subPhase = 1;
                     spawnCount = 0;
-                    spawnTimer = -30; // 약간 대기
+                    spawnTimer = -30; 
                 }
             }
         }
         else if (subPhase === 1) {
-            // [1단계] 뒤에서 A 등장, 느낌표 띄우고 국자 공격 3번
+            // [1단계] 공격 1초 전 느낌표 경고 후 국자 3번 발사
             if (spawnTimer === 0) {
-                // A 캐릭터 등장 및 경고(warning) 켜기
-                backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: true };
+                // A 캐릭터 등장 (이때 느낌표는 꺼진 상태)
+                backgroundCharacter = { text: 'A', x: player.x - 70, y: 270, warning: false };
             }
             
-            // 60프레임(약 1초)이 지나면 느낌표 경고 끄기
-            if (spawnTimer === 60) {
-                if(backgroundCharacter) backgroundCharacter.warning = false;
+            // 100프레임 주기로 패턴을 만듭니다.
+            let cycle = spawnTimer % 100;
+
+            // 공격 시점(0)으로부터 60프레임(약 1초) 전인 '40'일 때 느낌표 ON
+            if (spawnTimer > 0 && cycle === 40) {
+                if (backgroundCharacter) backgroundCharacter.warning = true;
             }
 
-            // 60프레임(경고 시간) 이후부터 90프레임 간격으로 공격 시작
-            if (spawnTimer > 60 && (spawnTimer - 60) % 90 === 0) {
+            // '0'이 되는 순간 (느낌표 켜지고 딱 1초 뒤) 느낌표 끄고 공격!
+            if (spawnTimer > 0 && cycle === 0) {
+                if (backgroundCharacter) backgroundCharacter.warning = false;
+                
                 spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 
@@ -147,7 +151,6 @@ function update() {
             }
             if (spawnTimer > 0 && spawnTimer % 80 === 0) {
                 let isUp = (spawnCount % 2 === 0);
-                // 점프력이 살짝 높아졌으므로 공중 높이도 살짝 올림 (250 -> 245)
                 let posY = isUp ? 245 : 310; 
                 
                 spawnObstacle('balloon', '풍선', posY, 5);
@@ -198,7 +201,6 @@ function update() {
         }
     }
     
-    // 화면 밖으로 나간 장애물 삭제
     obstacles = obstacles.filter(obs => obs.x > -100 && obs.x < 1000);
 }
 
@@ -206,15 +208,12 @@ function update() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     
-    // 바닥
     ctx.fillStyle = '#333';
     ctx.fillRect(0, 350, 800, 50);
 
-    // 플레이어
     ctx.fillStyle = 'blue';
     ctx.fillRect(player.x, player.y, player.w, player.h);
     
-    // 배경 캐릭터 (A, B, C)
     if (backgroundCharacter) {
         ctx.fillStyle = 'purple';
         ctx.fillRect(backgroundCharacter.x, backgroundCharacter.y, 40, 80);
@@ -222,7 +221,7 @@ function draw() {
         ctx.font = 'bold 20px Arial';
         ctx.fillText(backgroundCharacter.text, backgroundCharacter.x + 12, backgroundCharacter.y + 45);
 
-        // 느낌표 경고가 켜져 있으면 머리 위에 렌더링
+        // 느낌표가 true일 때만 경고 표시
         if (backgroundCharacter.warning) {
             ctx.fillStyle = 'red';
             ctx.font = 'bold 40px Arial';
@@ -230,7 +229,6 @@ function draw() {
         }
     }
 
-    // 장애물
     for (let obs of obstacles) {
         if(obs.type === 'attack') ctx.fillStyle = 'red';
         else if(obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
@@ -243,12 +241,10 @@ function draw() {
         ctx.fillText(obs.text, obs.x + 5, obs.y + 25);
     }
 
-    // 상태 표시
     ctx.fillStyle = 'black';
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
-    // 게임 오버
     if (isGameOver) {
         ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
