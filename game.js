@@ -1,12 +1,22 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
-// --- 🖼️ 이미지 불러오기 ---
-const playerImg = new Image();
-playerImg.src = 'player.png'; 
+// --- 🖼️ 다중 이미지 불러오기 시스템 ---
+const imgNames = [
+    'player', 'coke', 'humanA', 'scoop', 
+    'drink1', 'drink2', 'drink3', 
+    'cockroach', 'note', 'balloon', 
+    'errorsign', 'lock', 'drone', 
+    'missile', 'zombie1', 'zombie2', 'zombie3', 'zombie4', 'jewel'
+];
+const images = {};
+imgNames.forEach(name => {
+    images[name] = new Image();
+    images[name].src = name + '.png';
+});
 
 // --- 게임 상태 변수 ---
-let phase = 3; 
+let phase = 1; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -17,29 +27,15 @@ let isGameClear = false;
 let playerInput = ""; 
 const keys = {};
 
-// --- 플레이어 (6프레임 애니메이션 적용!) ---
+// --- 플레이어 ---
 const player = {
-    x: 180,        
-    y: 270,        
-    w: 40,         
-    h: 80,         
-    vy: 0,
-    gravity: 0.6,
-    jumpPower: -11.2, 
-    isJumping: false,
-    
-    frameX: 0,       
-    frameCount: 6,   
-    animTimer: 0     
+    x: 180, y: 270, w: 40, h: 80, vy: 0, gravity: 0.6, jumpPower: -11.2, isJumping: false,
+    frameX: 0, frameCount: 6, animTimer: 0     
 };
 
 // --- 드론 ---
 const drone = {
-    x: 180 - 40,
-    y: -50,
-    w: 40,
-    h: 40,
-    isAttached: false
+    x: 180 - 40, y: -50, w: 40, h: 40, isAttached: false
 };
 
 // --- 장애물 배열 및 배경 캐릭터 ---
@@ -64,7 +60,7 @@ window.addEventListener('keydown', (e) => {
             );
             
             if (target) {
-                if (target.type === 'gem') isGameClear = true;
+                if (target.type === 'jewel') isGameClear = true;
                 else obstacles = obstacles.filter(o => o !== target);
             }
         }
@@ -112,11 +108,11 @@ function checkCollision(p, obs) {
 function update() {
     if (isGameOver || isGameClear) return;
 
-    // --- 🏃 플레이어 도트 애니메이션 업데이트 ---
+    // --- 🏃 애니메이션 업데이트 ---
     if (phase === 3 && drone.isAttached) {
-        player.frameX = 2; // 드론 탑승 시 3번째 프레임 고정
+        player.frameX = 2; 
     } else if (phase === 4) {
-        player.frameX = 0; // 4라운드는 플레이어 고정
+        player.frameX = 0; 
     } else {
         let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
         if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
@@ -145,7 +141,6 @@ function update() {
         if (keys['KeyS'] && player.y < 350 - player.h) player.y += moveSpeed;
         if (keys['KeyA'] && player.x > 40) player.x -= moveSpeed; 
         if (keys['KeyD'] && player.x < 800 - player.w) player.x += moveSpeed;
-        
         drone.x = player.x - drone.w;
         drone.y = player.y;
     }
@@ -161,7 +156,7 @@ function update() {
         spawnTimer++;
         if (subPhase === 0) { 
             if (spawnTimer >= 70) { 
-                spawnObstacle('cola', '콜라', 310);
+                spawnObstacle('coke', '', 310);
                 spawnCount++;
                 spawnTimer = 0;
                 if (spawnCount >= 7) { subPhase = 1; spawnCount = 0; spawnTimer = 0; }
@@ -177,14 +172,14 @@ function update() {
             }
             if (spawnTimer > 0 && cycle === 0) {
                 if (backgroundCharacter) backgroundCharacter.warning = false;
-                spawnObstacle('attack', '국자', 310, -7, backgroundCharacter.x + 40);
+                spawnObstacle('scoop', '', 310, -7, backgroundCharacter.x + 40);
                 spawnCount++;
                 if (spawnCount >= 3) { subPhase = 2; spawnCount = 0; spawnTimer = -30; } 
             }
         }
         else if (subPhase === 2) { 
-            if (spawnTimer === 1) spawnObstacle('roach', '바퀴벌레', 310, 7);
-            let isRoachAlive = obstacles.find(obs => obs.type === 'roach');
+            if (spawnTimer === 1) spawnObstacle('cockroach', '', 310, 7);
+            let isRoachAlive = obstacles.find(obs => obs.type === 'cockroach');
             if (spawnTimer > 10 && !isRoachAlive) {
                 backgroundCharacter = null; 
                 subPhase = 3; spawnTimer = 0; 
@@ -192,7 +187,9 @@ function update() {
         }
         else if (subPhase === 3) { 
             if (spawnTimer >= 70) { 
-                spawnObstacle('cola', '콜라', 310);
+                // ★ 이온음료 3종 랜덤 스폰 ★
+                let randDrink = 'drink' + (Math.floor(Math.random() * 3) + 1);
+                spawnObstacle(randDrink, '', 310);
                 spawnCount++;
                 spawnTimer = 0;
                 if (spawnCount >= 5) { subPhase = 4; spawnCount = 0; spawnTimer = -120; } 
@@ -202,7 +199,7 @@ function update() {
             if (spawnTimer > 0 && spawnTimer % 45 === 0) { 
                 const pattern = [310, 200, 200, 310, 310]; 
                 let targetY = pattern[spawnCount];
-                spawnObstacle('balloon', '풍선', targetY, 9); 
+                spawnObstacle('balloon', '', targetY, 9); 
                 spawnCount++;
                 if (spawnCount >= 5) { subPhase = 5; spawnCount = 0; spawnTimer = -80; } 
             }
@@ -211,7 +208,7 @@ function update() {
             if (spawnTimer > 0 && spawnTimer % 45 === 0) { 
                 const pattern = [310, 200, 200, 310, 310];
                 let targetY = pattern[spawnCount];
-                spawnObstacle('note', '음표', targetY, 9);
+                spawnObstacle('note', '', targetY, 9);
                 spawnCount++;
                 if (spawnCount >= 5) { subPhase = 6; spawnCount = 0; spawnTimer = 0; }
             }
@@ -228,7 +225,7 @@ function update() {
             const errorPattern = [315, 315, 180, 315, 180]; 
             if (spawnTimer > 0 && spawnTimer % 50 === 0 && spawnCount < errorPattern.length) {
                 let targetY = errorPattern[spawnCount];
-                spawnObstacle('error', 'ERR', targetY, 10, 800, 35, 30);
+                spawnObstacle('errorsign', '', targetY, 10, 800, 35, 30);
                 spawnCount++;
             }
             if (spawnCount >= errorPattern.length && obstacles.length === 0) {
@@ -275,17 +272,14 @@ function update() {
         spawnTimer++;
         if (subPhase === 0) {
             if (drone.y < player.y) {
-                drone.y += 3; 
-                drone.x = player.x - drone.w;
+                drone.y += 3; drone.x = player.x - drone.w;
             } else {
-                drone.isAttached = true;
-                subPhase = 1;
+                drone.isAttached = true; subPhase = 1;
             }
         }
         else if (subPhase === 1) {
             if (player.y > 110) { 
-                player.y -= 2;
-                drone.y = player.y;
+                player.y -= 2; drone.y = player.y;
             } else {
                 subPhase = 2; spawnTimer = 0;
             }
@@ -293,7 +287,7 @@ function update() {
         else if (subPhase === 2) {
             if (spawnTimer > 60 && spawnTimer % 50 === 0 && spawnCount < 10) {
                 let missileY = Math.floor(Math.random() * 250) + 50; 
-                spawnObstacle('missile', '>>>', missileY, 9, 800, 50, 25);
+                spawnObstacle('missile', '', missileY, 9, 800, 50, 25);
                 spawnCount++;
             }
             if (spawnCount >= 10 && obstacles.length === 0) {
@@ -301,33 +295,21 @@ function update() {
             }
         }
         else if (subPhase === 3) {
-            // ★ 드론 착지 시 플레이어를 기존 시작 위치(x: 180)로 부드럽게 복귀시킴 ★
-            let isYReady = false;
-            let isXReady = false;
+            let isYReady = false, isXReady = false;
 
-            // Y축 하강
-            if (player.y < 270) {
-                player.y += 3;
-            } else {
-                player.y = 270;
-                isYReady = true;
-            }
+            if (player.y < 270) player.y += 3;
+            else { player.y = 270; isYReady = true; }
 
-            // X축 복귀 (목표: 180)
             if (player.x > 180) {
                 player.x -= 5;
                 if (player.x <= 180) { player.x = 180; isXReady = true; }
             } else if (player.x < 180) {
                 player.x += 5;
                 if (player.x >= 180) { player.x = 180; isXReady = true; }
-            } else {
-                isXReady = true;
-            }
+            } else { isXReady = true; }
 
-            drone.y = player.y;
-            drone.x = player.x - drone.w;
+            drone.y = player.y; drone.x = player.x - drone.w;
 
-            // X축, Y축 모두 제자리에 돌아오면 다음 라운드로
             if (isYReady && isXReady) {
                 drone.isAttached = false;
                 phase = 4; subPhase = 0; spawnTimer = 0;
@@ -353,9 +335,11 @@ function update() {
                 if (spawnTimer % 45 === 0) {
                     let isGround = Math.random() > 0.4; 
                     let zombieY = isGround ? (270 + Math.random() * 40) : (Math.random() * 200 + 50);
-                    // ★ 좀비 속도 아주 살짝 하향 (3 ~ 5.5) ★
                     let zombieSpeed = 3 + Math.random() * 2.5; 
-                    spawnObstacle('zombie', '좀비', zombieY, zombieSpeed, 800, 40, 40);
+                    
+                    // ★ 좀비 4종 랜덤 스폰 ★
+                    let randZombie = 'zombie' + (Math.floor(Math.random() * 4) + 1);
+                    spawnObstacle(randZombie, '', zombieY, zombieSpeed, 800, 40, 40);
                 }
             } 
             else if (spawnTimer > 1200 && obstacles.length === 0) {
@@ -363,16 +347,15 @@ function update() {
             }
         }
         else if (subPhase === 3) {
-            if (spawnTimer === 0) spawnObstacle('gem', '💎보석', 250, 3, 800, 50, 50);
+            if (spawnTimer === 0) spawnObstacle('jewel', '', 250, 3, 800, 50, 50);
             
-            let isGemAlive = obstacles.find(obs => obs.type === 'gem');
+            let isGemAlive = obstacles.find(obs => obs.type === 'jewel');
             if (spawnTimer > 10 && !isGemAlive && !isGameClear) {
                 isGameOver = true;
             }
         }
     }
 
-    // 충돌 처리
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.x -= obs.speed; 
@@ -391,158 +374,136 @@ function pCheckCollisionOnly(p, obs) {
 
 // --- 🎨 렌더링 로직 ---
 function draw() {
+    // 배경
     if (phase === 1) ctx.fillStyle = '#ffffff';
     else if (phase === 2) ctx.fillStyle = '#0a0a1a';
     else ctx.fillStyle = '#87CEEB';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     
+    // 바닥
     ctx.fillStyle = (phase === 2) ? '#00ffff' : '#333'; 
     ctx.fillRect(0, 350, 800, 50);
 
-    // 🌟 플레이어 그리기
-    if (playerImg.complete && playerImg.width > 0) {
-        let frameWidth = Math.floor(playerImg.width / player.frameCount); 
-        let frameHeight = playerImg.height;
-
+    // 🌟 플레이어
+    if (images.player.complete && images.player.width > 0) {
+        let frameWidth = Math.floor(images.player.width / player.frameCount); 
+        let frameHeight = images.player.height;
         ctx.drawImage(
-            playerImg,
-            Math.floor(player.frameX * frameWidth), 0, 
-            frameWidth, frameHeight,       
-            Math.floor(player.x), Math.floor(player.y), 
-            player.w, player.h             
+            images.player,
+            Math.floor(player.frameX * frameWidth), 0, frameWidth, frameHeight,       
+            Math.floor(player.x), Math.floor(player.y), player.w, player.h             
         );
     } else {
-        ctx.fillStyle = (phase === 2) ? '#00ffff' : 'blue'; 
-        ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
+        ctx.fillStyle = 'blue'; ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
     }
 
-    // 🛸 드론 그리기
+    // 🛸 드론
     if (phase >= 3) {
-        ctx.fillStyle = '#FFD700'; 
-        ctx.fillRect(Math.floor(drone.x), Math.floor(drone.y), drone.w, drone.h);
-        ctx.fillStyle = 'gray';
-        ctx.fillRect(Math.floor(drone.x - 5), Math.floor(drone.y - 5), 15, 5);
-        ctx.fillRect(Math.floor(drone.x + 30), Math.floor(drone.y - 5), 15, 5);
+        if (images.drone.complete && images.drone.width > 0) {
+            ctx.drawImage(images.drone, Math.floor(drone.x), Math.floor(drone.y), drone.w, drone.h);
+        } else {
+            ctx.fillStyle = '#FFD700'; ctx.fillRect(Math.floor(drone.x), Math.floor(drone.y), drone.w, drone.h);
+            ctx.fillStyle = 'gray';
+            ctx.fillRect(Math.floor(drone.x - 5), Math.floor(drone.y - 5), 15, 5);
+            ctx.fillRect(Math.floor(drone.x + 30), Math.floor(drone.y - 5), 15, 5);
+        }
     }
     
+    // 👤 배경 캐릭터 A
     if (backgroundCharacter) {
-        ctx.fillStyle = 'purple';
-        ctx.fillRect(Math.floor(backgroundCharacter.x), Math.floor(backgroundCharacter.y), 40, 80);
-        ctx.fillStyle = 'white';
-        ctx.font = 'bold 20px Arial';
-        ctx.fillText(backgroundCharacter.text, Math.floor(backgroundCharacter.x + 12), Math.floor(backgroundCharacter.y + 45));
+        if (images.humanA.complete && images.humanA.width > 0) {
+            ctx.drawImage(images.humanA, Math.floor(backgroundCharacter.x), Math.floor(backgroundCharacter.y), 40, 80);
+        } else {
+            ctx.fillStyle = 'purple';
+            ctx.fillRect(Math.floor(backgroundCharacter.x), Math.floor(backgroundCharacter.y), 40, 80);
+            ctx.fillStyle = 'white'; ctx.font = 'bold 20px Arial';
+            ctx.fillText(backgroundCharacter.text, Math.floor(backgroundCharacter.x + 12), Math.floor(backgroundCharacter.y + 45));
+        }
 
         if (backgroundCharacter.warning) {
-            ctx.fillStyle = 'red';
-            ctx.font = 'bold 40px Arial';
+            ctx.fillStyle = 'red'; ctx.font = 'bold 40px Arial';
             ctx.fillText('!', Math.floor(backgroundCharacter.x + 15), Math.floor(backgroundCharacter.y - 15));
         }
     }
 
+    // 안내 텍스트들
     if (phase === 3 && subPhase === 2 && spawnTimer < 120) {
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 30px Arial';
+        ctx.fillStyle = 'black'; ctx.font = 'bold 30px Arial';
         ctx.fillText("WASD로 조종하여 미사일을 피하세요!", 130, 150);
     }
     if (phase === 4 && subPhase === 0) {
-        ctx.fillStyle = 'black';
-        ctx.font = 'bold 20px Arial';
+        ctx.fillStyle = 'black'; ctx.font = 'bold 20px Arial';
         ctx.fillText("이제부터 스페이스바로 점프를 할 수 없습니다.", 180, 130);
         ctx.fillText("WASD와 스페이스바를 이용해 다가오는 장애물을 치우시오.", 110, 170);
     }
-    
     if (phase === 4 && subPhase === 2 && spawnTimer > 0 && spawnTimer < 180) {
-        ctx.fillStyle = 'red';
-        ctx.font = 'bold 30px Arial';
+        ctx.fillStyle = 'red'; ctx.font = 'bold 30px Arial';
         ctx.fillText("좀비 웨이브 접근 중! 플레이어를 보호하세요!", 120, 150);
     }
 
-    // 장애물 렌더링
+    // 🧱 장애물 렌더링 (이미지 우선 적용)
     for (let obs of obstacles) {
-        if (obs.type === 'attack') ctx.fillStyle = 'red';
-        else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
-        else if (obs.type === 'error') ctx.fillStyle = 'red';
-        else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
-        else if (obs.type === 'wall') ctx.fillStyle = '#444';
-        else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
-        else if (obs.type === 'zombie') ctx.fillStyle = '#2E8B57'; 
-        else if (obs.type === 'gem') ctx.fillStyle = '#FF00FF'; 
-        else if (obs.type === 'missile') ctx.fillStyle = '#ff0000'; 
-        else if (obs.type === 'data' || obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
-        else ctx.fillStyle = 'green';
+        // 이미지가 정상적으로 로드된 경우 이미지 출력
+        if (images[obs.type] && images[obs.type].complete && images[obs.type].width > 0) {
+            ctx.drawImage(images[obs.type], Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
+        } 
+        // 이미지가 없거나 아직 로딩 안 된 경우 임시 색상
+        else {
+            if (obs.type === 'data' || obs.type === 'hacker') ctx.fillStyle = 'transparent';
+            else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
+            else if (obs.type === 'wall') ctx.fillStyle = '#444';
+            else ctx.fillStyle = 'green';
 
-        if (obs.type !== 'data' && obs.type !== 'hacker') {
-            ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
-        }
-
-        if (obs.type === 'missile') {
-            ctx.fillStyle = 'orange';
-            ctx.fillRect(Math.floor(obs.x + obs.w), Math.floor(obs.y + 5), 15, 15);
+            if (obs.type !== 'data' && obs.type !== 'hacker') {
+                ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
+            }
         }
         
-        if (obs.type === 'hacker') {
-            ctx.fillStyle = '#00ff00'; 
-            ctx.font = '16px Arial';
-        } else if (obs.type === 'lock') {
-            ctx.fillStyle = 'gold'; 
-            ctx.font = 'bold 20px Arial';
-        } else if (obs.type === 'data') {
-            ctx.fillStyle = 'white'; 
-            ctx.font = 'bold 16px Courier New'; 
-        } else if (obs.type === 'missile') {
-            ctx.fillStyle = 'white'; 
-            ctx.font = 'bold 16px Arial'; 
-        } else {
-            ctx.fillStyle = 'white';
-            ctx.font = (obs.type === 'gem') ? '14px Arial' : '16px Arial';
-        }
-        
-        if (obs.type === 'lock') {
-            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
-        } else if (obs.type === 'error') {
-            ctx.fillText(obs.text, Math.floor(obs.x - 2), Math.floor(obs.y + 20));
-        } else if (obs.type === 'data') {
-            ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 20));
-        } else if (obs.type === 'missile') {
-            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 18));
-        } else if (obs.text !== '') {
-            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
+        // 텍스트가 필요한 특정 장애물 처리 (자물쇠 수식, 데이터 코드, 해커 텍스트, 쓰레기 텍스트 등)
+        if (obs.text !== '') {
+            if (obs.type === 'lock') {
+                ctx.fillStyle = 'white'; 
+                ctx.font = 'bold 20px Arial';
+                ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
+            } else if (obs.type === 'data') {
+                ctx.fillStyle = 'white'; 
+                ctx.font = 'bold 16px Courier New'; 
+                ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 20));
+            } else if (obs.type === 'hacker') {
+                ctx.fillStyle = '#00ff00'; 
+                ctx.font = '16px Arial';
+                ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
+            } else {
+                ctx.fillStyle = 'white';
+                ctx.font = '16px Arial';
+                ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
+            }
         }
     }
 
+    // UI 정보
     ctx.fillStyle = (phase === 1) ? 'black' : 'white';
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
     if (phase === 2 && subPhase === 1) {
-        ctx.fillStyle = 'white';
-        ctx.font = '14px Arial';
+        ctx.fillStyle = 'white'; ctx.font = '14px Arial';
         ctx.fillText("자물쇠의 수식에 맞는 정답을 숫자로 입력하세요", 260, 50);
-
-        ctx.fillStyle = '#00ffff';
-        ctx.font = 'bold 24px Arial';
+        ctx.fillStyle = '#00ffff'; ctx.font = 'bold 24px Arial';
         ctx.fillText(`입력 중: [ ${playerInput} ]`, 330, 80);
     }
 
+    // 게임 오버 / 클리어 처리
     if (isGameOver) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = 'red';
-        ctx.font = '40px Arial';
-        ctx.fillText("GAME OVER", 280, 200);
-        ctx.font = '20px Arial';
-        ctx.fillText("F5를 눌러 재시작하세요.", 290, 240);
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = 'red'; ctx.font = '40px Arial'; ctx.fillText("GAME OVER", 280, 200);
+        ctx.font = '20px Arial'; ctx.fillText("F5를 눌러 재시작하세요.", 290, 240);
     }
 
     if (isGameClear) {
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = '#FF00FF';
-        ctx.font = 'bold 50px Arial';
-        ctx.fillText("CLEAR!", 300, 200);
-        ctx.fillStyle = 'black';
-        ctx.font = '20px Arial';
-        ctx.fillText("모든 미션을 완수했습니다!", 280, 240);
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#FF00FF'; ctx.font = 'bold 50px Arial'; ctx.fillText("CLEAR!", 300, 200);
+        ctx.fillStyle = 'black'; ctx.font = '20px Arial'; ctx.fillText("모든 미션을 완수했습니다!", 280, 240);
     }
 }
 
