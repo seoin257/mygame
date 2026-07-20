@@ -114,14 +114,22 @@ function update() {
     if (isGameOver || isGameClear) return;
 
     // --- 🏃 플레이어 도트 애니메이션 업데이트 ---
-    let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
-    if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
-        player.animTimer++;
-        if (player.animTimer % 7 === 0) { 
-            player.frameX = (player.frameX + 1) % player.frameCount;
-        }
+    if (phase === 3 && drone.isAttached) {
+        // ★ 드론에 탑승하면 3번째 프레임(인덱스 2)으로 완벽 고정!
+        player.frameX = 2;
+    } else if (phase === 4) {
+        // 4라운드에서는 드론만 움직이므로 플레이어는 기본 서있는 자세(0) 고정
+        player.frameX = 0;
     } else {
-        player.frameX = 0; 
+        let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
+        if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
+            player.animTimer++;
+            if (player.animTimer % 7 === 0) { 
+                player.frameX = (player.frameX + 1) % player.frameCount;
+            }
+        } else {
+            player.frameX = 0; 
+        }
     }
 
     let moveSpeed = 7; 
@@ -245,14 +253,12 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // ★ 코드 텍스트를 짧게 줄이고, 너비(Hitbox)도 180에서 90으로 축소 ★
             const codeSnippets = ['if(err)', 'init();', 'break;', 'reset()', 'fetch()'];
             const dataPattern = [310, 180, 310, 180, 310]; 
             
             if (spawnTimer > 0 && spawnTimer % 70 === 0 && spawnCount < dataPattern.length) {
                 let targetY = dataPattern[spawnCount];
                 let text = codeSnippets[spawnCount];
-                // 너비를 90으로 줄여서 피하기 쉽게 만듦
                 spawnObstacle('data', text, targetY, 8, 800, 90, 30); 
                 spawnCount++;
             } else if (spawnCount >= dataPattern.length && obstacles.length === 0) {
@@ -288,9 +294,10 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            if (spawnTimer > 60 && spawnTimer % 45 === 0 && spawnCount < 10) {
+            // ★ 미사일 속도를 12 -> 9로 하향하고, 시작 대기시간 확보
+            if (spawnTimer > 60 && spawnTimer % 50 === 0 && spawnCount < 10) {
                 let missileY = Math.floor(Math.random() * 250) + 50; 
-                spawnObstacle('missile', '🚀', missileY, 12, 800, 40, 20);
+                spawnObstacle('missile', '>>>', missileY, 9, 800, 50, 25);
                 spawnCount++;
             }
             if (spawnCount >= 10 && obstacles.length === 0) {
@@ -416,15 +423,24 @@ function draw() {
         else if (obs.type === 'roach') ctx.fillStyle = 'saddlebrown';
         else if (obs.type === 'error') ctx.fillStyle = 'red';
         else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
-        else if (obs.type === 'data' || obs.type === 'missile') ctx.fillStyle = 'transparent'; 
         else if (obs.type === 'wall') ctx.fillStyle = '#444';
         else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
         else if (obs.type === 'gem') ctx.fillStyle = '#FF00FF'; 
-        else if (obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
+        else if (obs.type === 'missile') ctx.fillStyle = '#ff0000'; // ★ 미사일 강렬한 빨간색 처리
         else ctx.fillStyle = 'green';
 
-        ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
+        // 데이터와 해커는 투명 배경이므로 칠하지 않음
+        if (obs.type !== 'data' && obs.type !== 'hacker') {
+            ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
+        }
+
+        // 미사일 꼬리 디테일 (추진체 불꽃)
+        if (obs.type === 'missile') {
+            ctx.fillStyle = 'orange';
+            ctx.fillRect(Math.floor(obs.x + obs.w), Math.floor(obs.y + 5), 15, 15);
+        }
         
+        // 텍스트 디자인
         if (obs.type === 'hacker') {
             ctx.fillStyle = '#00ff00'; 
             ctx.font = '16px Arial';
@@ -435,12 +451,14 @@ function draw() {
             ctx.fillStyle = 'white'; 
             ctx.font = 'bold 16px Courier New'; 
         } else if (obs.type === 'missile') {
-            ctx.font = '24px Arial'; 
+            ctx.fillStyle = 'white'; 
+            ctx.font = 'bold 16px Arial'; 
         } else {
             ctx.fillStyle = 'white';
             ctx.font = (obs.type === 'gem') ? '14px Arial' : '16px Arial';
         }
         
+        // 텍스트 위치 렌더링
         if (obs.type === 'lock') {
             ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
         } else if (obs.type === 'error') {
@@ -448,7 +466,7 @@ function draw() {
         } else if (obs.type === 'data') {
             ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 20));
         } else if (obs.type === 'missile') {
-            ctx.fillText(obs.text, Math.floor(obs.x), Math.floor(obs.y + 18));
+            ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 18));
         } else if (obs.text !== '') {
             ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + 25));
         }
@@ -458,7 +476,7 @@ function draw() {
     ctx.font = '20px Arial';
     ctx.fillText(`Phase: ${phase} / Sub: ${subPhase}`, 20, 30);
 
-    // 자물쇠 안내 메시지 추가
+    // 자물쇠 안내 메시지
     if (phase === 2 && subPhase === 1) {
         ctx.fillStyle = 'white';
         ctx.font = '14px Arial';
