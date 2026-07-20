@@ -1,79 +1,154 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
+// --- 🖼️ 이미지 불러오기 ---
 const playerImg = new Image();
 playerImg.src = 'player.png'; 
 
+// --- 게임 상태 변수 ---
 let phase = 1; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
+let score = 0;
 let isGameOver = false;
 let isGameClear = false;
 
 let playerInput = ""; 
 const keys = {};
 
+// --- 플레이어 (7프레임 애니메이션 적용!) ---
 const player = {
-    x: 180, y: 270, w: 40, h: 80, vy: 0, gravity: 0.6, jumpPower: -11.2, isJumping: false,
-    frameX: 0, frameCount: 7, animTimer: 0
+    x: 180,        
+    y: 270,        
+    w: 40,         
+    h: 80,         
+    vy: 0,
+    gravity: 0.6,
+    jumpPower: -11.2, 
+    isJumping: false,
+    
+    // 도트 애니메이션용 추가 변수
+    frameX: 0,       
+    frameCount: 7,   // ★ 4에서 7로 변경! ★
+    animTimer: 0     
 };
 
-const drone = { x: 140, y: -50, w: 40, h: 40, isAttached: false };
+// --- 드론 ---
+const drone = {
+    x: 180 - 40,
+    y: -50,
+    w: 40,
+    h: 40,
+    isAttached: false
+};
 
+// --- 장애물 배열 및 배경 캐릭터 ---
 let obstacles = [];
 let backgroundCharacter = null; 
 
+// --- 입력 감지 ---
 window.addEventListener('keydown', (e) => {
     keys[e.code] = true;
+
     if (e.code === 'Space') {
         if (phase === 1 || phase === 2) {
-            if (!player.isJumping) { player.vy = player.jumpPower; player.isJumping = true; }
-        } else if (phase === 4 && subPhase >= 1) {
-            let target = obstacles.find(obs => Math.abs((drone.x + 20) - (obs.x + obs.w/2)) < 60 && Math.abs((drone.y + 20) - (obs.y + obs.h/2)) < 60);
-            if (target) { if (target.type === 'gem') isGameClear = true; else obstacles = obstacles.filter(o => o !== target); }
+            if (!player.isJumping) {
+                player.vy = player.jumpPower;
+                player.isJumping = true;
+            }
+        } 
+        else if (phase === 4 && subPhase >= 1) {
+            let target = obstacles.find(obs => 
+                Math.abs((drone.x + drone.w/2) - (obs.x + obs.w/2)) < 60 &&
+                Math.abs((drone.y + drone.h/2) - (obs.y + obs.h/2)) < 60
+            );
+            
+            if (target) {
+                if (target.type === 'gem') isGameClear = true;
+                else obstacles = obstacles.filter(o => o !== target);
+            }
         }
     }
+
     if (phase === 2 && subPhase === 1 && e.key >= '0' && e.key <= '9') {
         playerInput += e.key;
         let target = obstacles.find(obs => obs.type === 'lock');
+        
         if (target) {
-            if (target.mathAns === playerInput) { obstacles = obstacles.filter(obs => obs !== target); playerInput = ""; }
-            else if (!target.mathAns.startsWith(playerInput)) playerInput = e.key;
+            if (target.mathAns === playerInput) {
+                obstacles = obstacles.filter(obs => obs !== target);
+                playerInput = ""; 
+            } else if (!target.mathAns.startsWith(playerInput)) {
+                playerInput = e.key; 
+            }
         }
     }
-    if (phase === 2 && subPhase === 1 && e.key === 'Backspace') playerInput = playerInput.slice(0, -1);
+    if (phase === 2 && subPhase === 1 && e.key === 'Backspace') {
+        playerInput = playerInput.slice(0, -1);
+    }
 });
 
-window.addEventListener('keyup', (e) => { keys[e.code] = false; });
+window.addEventListener('keyup', (e) => {
+    keys[e.code] = false;
+});
 
-function spawnObstacle(type, text, positionY, speed, startX, w, h) {
-    obstacles.push({ x: startX || 800, y: positionY, w: w || 50, h: h || 40, type, text, speed });
+function spawnObstacle(type, text, positionY, speed = 5, startX = 800, w = 50, h = 40) {
+    obstacles.push({
+        x: startX, y: positionY, w: w, h: h, type: type, text: text, speed: speed
+    });
 }
 
+function checkCollision(p, obs) {
+    let hitX = p.x;
+    let hitW = p.w;
+    if (drone.isAttached) {
+        hitX = drone.x; 
+        hitW = drone.w + p.w;
+    }
+    return (hitX < obs.x + obs.w && hitX + hitW > obs.x && p.y < obs.y + obs.h && p.y + p.h > obs.y);
+}
+
+// --- 메인 게임 물리 & 시나리오 업데이트 ---
 function update() {
     if (isGameOver || isGameClear) return;
 
+    // --- 🏃 플레이어 7프레임 애니메이션 업데이트 ---
     if (!player.isJumping) {
         player.animTimer++;
-        if (player.animTimer % 6 === 0) player.frameX = (player.frameX + 1) % player.frameCount;
-    } else { player.frameX = 0; }
+        // 프레임 수가 많아졌으므로 8에서 6으로 템포를 살짝 당겨 부드럽게 재생
+        if (player.animTimer % 6 === 0) { 
+            player.frameX = (player.frameX + 1) % player.frameCount;
+        }
+    } else {
+        player.frameX = 0; // 점프 중일 때는 0번 프레임 고정 (원하는 번호로 변경 가능)
+    }
 
     let moveSpeed = 6;
+
     if (phase === 1 || phase === 2) {
-        player.vy += player.gravity; player.y += player.vy;
-        if (player.y >= 270) { player.y = 270; player.vy = 0; player.isJumping = false; }
-    } else if (phase === 3 && subPhase === 2) {
+        player.vy += player.gravity;
+        player.y += player.vy;
+        if (player.y >= 350 - player.h) {
+            player.y = 350 - player.h;
+            player.vy = 0;
+            player.isJumping = false;
+        }
+    } 
+    else if (phase === 3 && subPhase === 2) {
         if (keys['KeyW'] && player.y > 0) player.y -= moveSpeed;
-        if (keys['KeyS'] && player.y < 270) player.y += moveSpeed;
+        if (keys['KeyS'] && player.y < 350 - player.h) player.y += moveSpeed;
         if (keys['KeyA'] && player.x > 40) player.x -= moveSpeed; 
-        if (keys['KeyD'] && player.x < 760) player.x += moveSpeed;
-        drone.x = player.x - 40; drone.y = player.y;
-    } else if (phase === 4 && subPhase >= 1) {
+        if (keys['KeyD'] && player.x < 800 - player.w) player.x += moveSpeed;
+        
+        drone.x = player.x - drone.w;
+        drone.y = player.y;
+    }
+    else if (phase === 4 && subPhase >= 1) {
         if (keys['KeyW'] && drone.y > 0) drone.y -= moveSpeed;
-        if (keys['KeyS'] && drone.y < 310) drone.y += moveSpeed;
+        if (keys['KeyS'] && drone.y < 350 - drone.h) drone.y += moveSpeed;
         if (keys['KeyA'] && drone.x > 0) drone.x -= moveSpeed;
-        if (keys['KeyD'] && drone.x < 760) drone.x += moveSpeed;
+        if (keys['KeyD'] && drone.x < 800 - drone.w) drone.x += moveSpeed;
     }
 
     // --- 시나리오 엔진 ---
@@ -286,18 +361,28 @@ function draw() {
     ctx.fillRect(0, 350, 800, 50);
 
     // 🌟 플레이어 그리기 (이미지가 로드되었으면 도트로, 아니면 기존 네모로)
-    if (playerImg.complete && playerImg.width > 0) {
-        // ★ 7프레임의 크기를 자동으로 계산해서 잘라냅니다! ★
-        let frameWidth = playerImg.width / player.frameCount; 
-        let frameHeight = playerImg.height;
+// [교체할 줄 번호: 233 ~ 249 부근]
+if (playerImg.complete && playerImg.width > 0) {
+    // 1. 이미지 전체 너비를 7로 나눠 한 프레임의 정확한 너비를 구함
+    let frameWidth = playerImg.width / 7; 
+    let frameHeight = playerImg.height;
 
-        ctx.drawImage(
-            playerImg,
-            player.frameX * frameWidth, 0, // 원본 이미지에서 잘라낼 X, Y 위치
-            frameWidth, frameHeight,       // 원본 이미지에서 잘라낼 너비, 높이
-            Math.floor(player.x), Math.floor(player.y), // 캔버스에 그릴 위치
-            player.w, player.h             // 캔버스에 그릴 크기 (40x80)
-        );
+    // 2. 현재 프레임(0~6)에 맞춰서 잘라낼 시작 X 좌표
+    let sx = player.frameX * frameWidth;
+    
+    // 3. 캔버스에 그릴 고정된 좌표
+    let dx = Math.floor(player.x);
+    let dy = Math.floor(player.y);
+
+    // 4. 명확하게 9개 인자를 모두 사용하여 잘라내기
+    ctx.drawImage(
+        playerImg,
+        sx, 0,             // [소스] 잘라낼 시작 X, Y
+        frameWidth, frameHeight, // [소스] 잘라낼 가로, 세로 크기
+        dx, dy,            // [목적지] 캔버스에 그릴 X, Y
+        player.w, player.h // [목적지] 캔버스에 그릴 가로, 세로 크기
+    );
+}
     } else {
         // 이미지가 로딩 중이거나 경로가 틀렸을 때 표시할 임시 파란 네모
         ctx.fillStyle = (phase === 2) ? '#00ffff' : 'blue'; 
