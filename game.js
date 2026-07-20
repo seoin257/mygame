@@ -6,7 +6,7 @@ const playerImg = new Image();
 playerImg.src = 'player.png'; 
 
 // --- 게임 상태 변수 ---
-let phase = 3; 
+let phase = 1; 
 let subPhase = 0;
 let spawnTimer = 0; 
 let spawnCount = 0; 
@@ -28,7 +28,6 @@ const player = {
     jumpPower: -11.2, 
     isJumping: false,
     
-    // 도트 애니메이션용 추가 변수
     frameX: 0,       
     frameCount: 6,   
     animTimer: 0     
@@ -59,6 +58,7 @@ window.addEventListener('keydown', (e) => {
             }
         } 
         else if (phase === 4 && subPhase >= 1) {
+            // 드론으로 장애물(쓰레기, 좀비, 보석) 잡기
             let target = obstacles.find(obs => 
                 Math.abs((drone.x + drone.w/2) - (obs.x + obs.w/2)) < 60 &&
                 Math.abs((drone.y + drone.h/2) - (obs.y + obs.h/2)) < 60
@@ -115,11 +115,9 @@ function update() {
 
     // --- 🏃 플레이어 도트 애니메이션 업데이트 ---
     if (phase === 3 && drone.isAttached) {
-        // ★ 드론에 탑승하면 3번째 프레임(인덱스 2)으로 완벽 고정!
-        player.frameX = 2;
+        player.frameX = 2; // 드론 탑승 시 3번째 프레임 고정
     } else if (phase === 4) {
-        // 4라운드에서는 드론만 움직이므로 플레이어는 기본 서있는 자세(0) 고정
-        player.frameX = 0;
+        player.frameX = 0; // 4라운드는 플레이어 고정
     } else {
         let isMoving = keys['KeyW'] || keys['KeyS'] || keys['KeyA'] || keys['KeyD'];
         if (!player.isJumping && (phase === 1 || phase === 2 || isMoving)) {
@@ -294,7 +292,6 @@ function update() {
             }
         }
         else if (subPhase === 2) {
-            // ★ 미사일 속도를 12 -> 9로 하향하고, 시작 대기시간 확보
             if (spawnTimer > 60 && spawnTimer % 50 === 0 && spawnCount < 10) {
                 let missileY = Math.floor(Math.random() * 250) + 50; 
                 spawnObstacle('missile', '>>>', missileY, 9, 800, 50, 25);
@@ -321,15 +318,33 @@ function update() {
             if (spawnTimer > 180) { subPhase = 1; spawnTimer = 0; }
         }
         else if (subPhase === 1) {
+            // [1단계] 쓰레기 5개 청소
             if (spawnTimer > 0 && spawnTimer % 80 === 0 && spawnCount < 5) {
                 spawnObstacle('garbage', '쓰레기', 310, 4, 800, 40, 40);
                 spawnCount++;
             }
             if (spawnCount >= 5 && obstacles.length === 0) {
-                subPhase = 2; spawnTimer = -60; 
+                subPhase = 2; spawnTimer = -60; spawnCount = 0;
             }
         }
         else if (subPhase === 2) {
+            // [2단계] ★ 20초(1200프레임) 좀비 웨이브 디펜스 ★
+            if (spawnTimer >= 0 && spawnTimer <= 1200) {
+                // 45프레임마다 좀비 스폰
+                if (spawnTimer % 45 === 0) {
+                    // 60% 확률로 플레이어를 직접 위협하는 바닥 높이로, 40%는 공중으로
+                    let isGround = Math.random() > 0.4; 
+                    let zombieY = isGround ? (270 + Math.random() * 40) : (Math.random() * 200 + 50);
+                    let zombieSpeed = 4 + Math.random() * 3; // 4~7 랜덤 속도
+                    spawnObstacle('zombie', '좀비', zombieY, zombieSpeed, 800, 40, 40);
+                }
+            } 
+            else if (spawnTimer > 1200 && obstacles.length === 0) {
+                subPhase = 3; spawnTimer = -60; // 좀비 웨이브 클리어!
+            }
+        }
+        else if (subPhase === 3) {
+            // [3단계] 최종 보석 등장
             if (spawnTimer === 0) spawnObstacle('gem', '💎보석', 250, 3, 800, 50, 50);
             
             let isGemAlive = obstacles.find(obs => obs.type === 'gem');
@@ -339,7 +354,7 @@ function update() {
         }
     }
 
-    // 충돌 처리
+    // 충돌 처리 (4라운드는 플레이어 본체 피격만 체크)
     for (let i = 0; i < obstacles.length; i++) {
         let obs = obstacles[i];
         obs.x -= obs.speed; 
@@ -383,6 +398,7 @@ function draw() {
         ctx.fillRect(Math.floor(player.x), Math.floor(player.y), player.w, player.h);
     }
 
+    // 🛸 드론 그리기
     if (phase >= 3) {
         ctx.fillStyle = '#FFD700'; 
         ctx.fillRect(Math.floor(drone.x), Math.floor(drone.y), drone.w, drone.h);
@@ -416,6 +432,13 @@ function draw() {
         ctx.fillText("이제부터 스페이스바로 점프를 할 수 없습니다.", 180, 130);
         ctx.fillText("WASD와 스페이스바를 이용해 다가오는 장애물을 치우시오.", 110, 170);
     }
+    
+    // ★ 좀비 웨이브 경고 텍스트
+    if (phase === 4 && subPhase === 2 && spawnTimer > 0 && spawnTimer < 180) {
+        ctx.fillStyle = 'red';
+        ctx.font = 'bold 30px Arial';
+        ctx.fillText("좀비 웨이브 접근 중! 플레이어를 보호하세요!", 120, 150);
+    }
 
     // 장애물 렌더링
     for (let obs of obstacles) {
@@ -425,22 +448,21 @@ function draw() {
         else if (obs.type === 'lock') ctx.fillStyle = '#555'; 
         else if (obs.type === 'wall') ctx.fillStyle = '#444';
         else if (obs.type === 'garbage') ctx.fillStyle = '#553311';
+        else if (obs.type === 'zombie') ctx.fillStyle = '#2E8B57'; // 좀비는 칙칙한 녹색
         else if (obs.type === 'gem') ctx.fillStyle = '#FF00FF'; 
-        else if (obs.type === 'missile') ctx.fillStyle = '#ff0000'; // ★ 미사일 강렬한 빨간색 처리
+        else if (obs.type === 'missile') ctx.fillStyle = '#ff0000'; 
+        else if (obs.type === 'data' || obs.type === 'hacker') ctx.fillStyle = 'transparent'; 
         else ctx.fillStyle = 'green';
 
-        // 데이터와 해커는 투명 배경이므로 칠하지 않음
         if (obs.type !== 'data' && obs.type !== 'hacker') {
             ctx.fillRect(Math.floor(obs.x), Math.floor(obs.y), obs.w, obs.h);
         }
 
-        // 미사일 꼬리 디테일 (추진체 불꽃)
         if (obs.type === 'missile') {
             ctx.fillStyle = 'orange';
             ctx.fillRect(Math.floor(obs.x + obs.w), Math.floor(obs.y + 5), 15, 15);
         }
         
-        // 텍스트 디자인
         if (obs.type === 'hacker') {
             ctx.fillStyle = '#00ff00'; 
             ctx.font = '16px Arial';
@@ -458,7 +480,6 @@ function draw() {
             ctx.font = (obs.type === 'gem') ? '14px Arial' : '16px Arial';
         }
         
-        // 텍스트 위치 렌더링
         if (obs.type === 'lock') {
             ctx.fillText(obs.text, Math.floor(obs.x + 5), Math.floor(obs.y + obs.h / 2));
         } else if (obs.type === 'error') {
